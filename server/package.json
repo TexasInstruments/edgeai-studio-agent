@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "@dvermeir/cbuf": "^0.1.4",
+    "express": "^4.18.1",
+    "log-timestamp": "^0.3.0",
+    "request": "^2.88.2"
+  }
+}
