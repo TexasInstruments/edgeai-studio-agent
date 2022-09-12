@@ -8,7 +8,7 @@ def run_loop(name=''):
         cmd='../../app_edgeai.py ../../../configs/object_inputcam.yaml'
         os.system(cmd)
     elif name=='RAWVIDEO':
-        cmd='../../python_gst.py'
+        cmd='python_gst.py'
         os.system(cmd)
     else:
         print("invalid")
