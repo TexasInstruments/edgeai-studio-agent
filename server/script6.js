@@ -4,14 +4,37 @@ var http = require('http')
 var net = require('net');
 var child = require('child_process');
 var EventEmitter = require('events').EventEmitter;
+let cors = require("cors");
+var bodyParser = require('body-parser')
 require('log-timestamp');   //adds timestamp in console.log()
 
 var app = express();
 app.use(express.static(__dirname + '/'));
 
-var httpServer = http.createServer(app);
 const port = 8080;  //change port number is required
 const udp_port = 8081;  //change port number is required
+
+//Set Cors settings
+const corsOptions = {
+    origin: '*',
+    optionsSuccessStatus: 200 // For legacy browser support
+};
+app.use(cors(corsOptions));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+/* respond headers */
+// Add Access Control Allow Origin headers
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept"
+  );
+  next();
+});
+//#################################
+var httpServer = http.createServer(app);
 
 var emitter = new EventEmitter();
 
