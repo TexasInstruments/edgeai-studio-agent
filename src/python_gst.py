@@ -30,7 +30,8 @@ def on_message(bus: Gst.Bus, message: Gst.Message, loop: GLib.MainLoop):
 if __name__ == '__main__':
     Gst.init()
     print("before play")
-    p = Gst.parse_launch(" v4l2src device=/dev/video2 ! videoconvert ! clockoverlay ! video/x-raw, width=640, height=360, framerate=10/1 ! x264enc tune=zerolatency speed-preset=superfast bitrate=128 ! video/x-h264,profile=high ! mp4mux fragment-duration=1 ! udpsink host=127.0.0.1 port=8081")
+    #p = Gst.parse_launch(" v4l2src device=/dev/video2 ! videoconvert ! clockoverlay ! video/x-raw, width=640, height=360, framerate=10/1 ! x264enc tune=zerolatency speed-preset=superfast bitrate=128 ! video/x-h264,profile=high ! mp4mux fragment-duration=1 ! udpsink host=127.0.0.1 port=8081")
+    p = Gst.parse_launch("v4l2src device=/dev/video2 ! videoconvert ! clockoverlay ! video/x-raw, width=640, height=360, framerate=10/1 ! x264enc tune=zerolatency speed-preset=superfast bitrate=128 ! video/x-h264,profile=high ! mux. alsasrc device=hw:0 ! queue ! audioconvert ! audioresample ! audio/x-raw, format=(string)S16LE, rate=(int)48000 !  mux. matroskamux name=mux !  udpsink host=127.0.0.1 port=8081")
     bus = p.get_bus()
     # allow bus to emit messages to main thread
     bus.add_signal_watch()
