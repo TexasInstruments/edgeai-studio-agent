@@ -188,7 +188,9 @@ def initiate_sensor_session(x: Sensor):
     if(count == 1):
         raise HTTPException(
             status_code=409, detail="sensor session already running..!!")
+   
     p = subprocess.Popen("node ../server/script6.js", shell=True)
+    time.sleep(2)
     for proc in psutil.process_iter():
         if process_name in proc.name():
             pid = proc.pid
