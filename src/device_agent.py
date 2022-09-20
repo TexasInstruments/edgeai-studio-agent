@@ -204,7 +204,7 @@ def initiate_sensor_session(x: Sensor):
     return sensor_session
 
 #GET endpoint for getting sensor session details
-@app.get('/sensor-session',status_code=200)
+@app.get('/sensor-session',status_code=response_code.OK.value)
 def get_sensor_session():
     global ss_id
     global sensor_session
@@ -215,7 +215,7 @@ def get_sensor_session():
         return sensor_session
 
 #GET endpoint for getting sensor session details using id
-@app.get('/sensor-session/{id}',status_code=200)
+@app.get('/sensor-session/{id}',status_code=response_code.OK.value)
 def get_sensor_session_id(id):
     global ss_id
     global sensor_session
@@ -246,7 +246,7 @@ def delete_sensor_session(id):
             count = 1
             os.kill(pid,2)
             sensor_session=None
-            return("session deleted")
+            return(response_detail.ACCEPTED.value)
     if(count == 0):
         raise HTTPException(
             status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
@@ -269,7 +269,7 @@ def delete_data_pipeline(id):
                 os.kill(pid,2)
                 sensor_session["session"]["data_pipeline_status"]="down"
                 sensor_session["session"]["data_pipeline_pid"]=0
-        return("data pipleine stopped")
+        return(response_detail.ACCEPTED.value)
     else:
         raise HTTPException(
             status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
@@ -286,7 +286,7 @@ def delete_data_pipeline(id):
             status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
     
 #GET call endpoint to get sensor details
-@app.get('/sensor',status_code=200) # get sensor details
+@app.get('/sensor',status_code=response_code.OK.value) # get sensor details
 def get_sensor():   
     i=0
     j=0
@@ -327,7 +327,7 @@ def get_sensor():
             status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
 
 #GET call endpoint to get sensor details using id
-@app.get('/sensor/{id}',status_code=200) # get sensor details by id
+@app.get('/sensor/{id}',status_code=response_code.OK.value) # get sensor details by id
 def get_sensor_byid(id):
     k=0
     j=0
@@ -370,7 +370,7 @@ def get_sensor_byid(id):
     return sensor
 
 #POST call endpoint to create project
-@app.post('/project',status_code=201)
+@app.post('/project',status_code=response_code.CREATED.value)
 def post_project(x: Project):
     global cwd
     project = x.dict()
@@ -382,7 +382,7 @@ def post_project(x: Project):
         return(response_detail.CREATED.value)
 
 #POST call endpoint to upload model
-@app.post('/project/{id}/model',status_code=201)
+@app.post('/project/{id}/model',status_code=response_code.CREATED.value)
 async def upload_file(id,file: UploadFile = File(...)):
     count = 0
     global cwd
@@ -429,7 +429,7 @@ async def upload_file(id,file: UploadFile = File(...)):
         return(response_detail.CREATED.value)
 
 #GET call endpoint to get project details
-@app.get('/project/{id}',status_code=200)
+@app.get('/project/{id}',status_code=response_code.OK.value)
 def get_project_id(id):
     count = 0
     global cwd
@@ -453,7 +453,7 @@ def get_project_id(id):
         return(project)
 
 #DELETE call endpoint to delete project
-@app.delete('/project/{id}',status_code=200)
+@app.delete('/project/{id}',status_code=response_code.OK.value)
 def delete_project(id):
     count = 0
     global cwd
