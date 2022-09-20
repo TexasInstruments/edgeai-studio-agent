@@ -2,13 +2,19 @@ from multiprocessing import Process
 import time
 import os
 import psutil
+import cv2
 
 def run_loop(name=''):
     if name=='INFERENCE':
         cmd='../../app_edgeai.py ../../../configs/object_inputcam.yaml'
         os.system(cmd)
     elif name=='RAWVIDEO':
-        cmd='./python_gst.py'
+        cap = cv2.VideoCapture(2)
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        cap.release()
+        cmd='./python_gst.py {} {}'.format(width,height)
+
         os.system(cmd)
     else:
         print("invalid")
