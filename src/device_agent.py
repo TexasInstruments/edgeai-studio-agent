@@ -476,10 +476,10 @@ def delete_project(id):
         raise HTTPException(
             status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
     else:
-        return("model deleted successfully")
+        return(response_detail.SUCCESS.value)
 
 if __name__ == "__main__":
-    uvicorn.run("device_agent_copy:app",
+    uvicorn.run("device_agent:app",
                 host="0.0.0.0", port=8000, reload=True)
 
 '''
