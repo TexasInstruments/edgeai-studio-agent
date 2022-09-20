@@ -166,10 +166,11 @@ def initiate_sensor_session(x: Sensor):
     i=0
     process_name="node"
     pid=None
+    global p
     id = subprocess.check_output("./get_videono.sh")
     if(len(id) == 0):
         raise HTTPException(
-            status_code=404, detail="invalid input ")
+            status_code=405, detail="invalid input ")
     else:
         for line in id.split(b'\n'):
             i=i+1
@@ -178,59 +179,57 @@ def initiate_sensor_session(x: Sensor):
         id="dev/video" + (id[len(id)-1])
         if(id != x.device[0].id):
             raise HTTPException(
-                status_code=404, detail="invalid input ")
+                status_code=405, detail="invalid input ")
     for proc in psutil.process_iter():
         if process_name in proc.name():
             pid = proc.pid
             count = 1
             break
-
-    if(count == 1):
-        raise HTTPException(
-            status_code=409, detail="sensor session already running..!!")
-   
-    p = subprocess.Popen("node ../server/script6.js", shell=True)
-    time.sleep(2)
-    for proc in psutil.process_iter():
-        if process_name in proc.name():
-            pid = proc.pid
-    ss_id = str(uuid.uuid4())
-    y=Model1(session={
-        "id": ss_id,
-        "http_port": 8080,
-        "http_url": "/stream",
-        "http_status": "started",
-        "http_pid": p.pid + 1,
-        "ws_port": 0,
-        "ws_url": "",
-        "ws_status": "down",
-        "ws_pid": 0,
-        "udp_server_port": 8081,
-        "udp_client_port": 0,
-        "udp_status": "started",
-        "udp_pid": p.pid +1,
-        "tcp_server_port": 0,
-        "tcp_client_port": 0,
-        "tcp_status": "down",
-        "tcp_pid": 0,
-        "data_pipeline_status": "down",
-        "data_pipeline_pid": 0
-        },
-        sensor={
-        "name": x.name,
-        "id": x.id,
-        "type": x.type,
-        "device": [
-            {
-            "id": x.device[0].id,
-            "type": x.device[0].type,
-            "description": x.device[0].description,
-            "status": x.device[0].status
-            }
-        ]
-        })
-    sensor_session = y.dict()
-    return y
+    
+    if(count != 1):
+        #raise HTTPException(
+         #   status_code=409, detail="sensor session already running..!!")
+        print("hello")
+        p = subprocess.Popen("node ../server/script6.js", shell=True)
+        time.sleep(2)
+        ss_id = str(uuid.uuid4())
+        y=Model1(session={
+            "id": ss_id,
+            "http_port": 8080,
+            "http_url": "/stream",
+            "http_status": "started",
+            "http_pid": p.pid + 1,
+            "ws_port": 0,
+            "ws_url": "",
+            "ws_status": "down",
+            "ws_pid": 0,
+            "udp_server_port": 8081,
+            "udp_client_port": 0,
+            "udp_status": "started",
+            "udp_pid": p.pid +1,
+            "tcp_server_port": 0,
+            "tcp_client_port": 0,
+            "tcp_status": "down",
+            "tcp_pid": 0,
+            "data_pipeline_status": "down",
+            "data_pipeline_pid": 0
+            },
+            sensor={
+            "name": x.name,
+            "id": x.id,
+            "type": x.type,
+            "device": [
+                {
+                "id": x.device[0].id,
+                "type": x.device[0].type,
+                "description": x.device[0].description,
+                "status": x.device[0].status
+                }
+            ]
+            })
+        sensor_session = y.dict()
+        return y
+    return sensor_session
 
 #GET endpoint for getting sensor session details
 @app.get('/sensor-session')
