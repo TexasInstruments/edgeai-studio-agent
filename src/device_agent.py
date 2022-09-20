@@ -1,7 +1,5 @@
 '''
 Fast API endpoints for Agent on EVM
-Dependency:
-$ pip3 install fastapi uvicorn
 '''
 
 import time
@@ -21,6 +19,7 @@ from fastapi.responses import FileResponse
 import uuid
 import glob
 import hashlib
+from definitions import response_code,response_detail,server_details
 
 app = FastAPI()
 app = FastAPI()
@@ -40,26 +39,27 @@ inference_process=None
 rawvideo_process=None
 ss_id=0
 sensor_session=None
+cwd = os.getcwd()
 
 # Define request-body using pydantic
 class Session(BaseModel):
     id: str
-    http_port: int
-    http_url: str
-    http_status: str
+    http_port: int = Field(default=server_details.HTTP_PORT.value)
+    http_url: str = Field(default="/stream")
+    http_status: str 
     http_pid: int
-    ws_port: int
-    ws_url: str
-    ws_status: str
-    ws_pid: int
-    udp_server_port: int
-    udp_client_port: int
+    ws_port: int = Field(default=server_details.WS_PORT.value)
+    ws_url: str = Field(default=server_details.WS_URL.value)
+    ws_status: str = Field(default="down")
+    ws_pid: int = Field(default=0)
+    udp_server_port: int = Field(default=server_details.UDP_SERVER_PORT.value)
+    udp_client_port: int = Field(default=server_details.UDP_CLIENT_PORT.value)
     udp_status: str
     udp_pid: int
-    tcp_server_port: int
-    tcp_client_port: int
-    tcp_status: str
-    tcp_pid: int
+    tcp_server_port: int = Field(default=server_details.TCP_SERVER_PORT.value)
+    tcp_client_port: int = Field(default=server_details.TCP_CLIENT_PORT.value)
+    tcp_status: str = Field(default=server_details.TCP_STATUS.value)
+    tcp_pid: int = Field(default=server_details.TCP_PID.value)
     data_pipeline_status: str
     data_pipeline_pid: int
 
@@ -79,32 +79,29 @@ class Sensor(BaseModel):
 
 
 class Project(BaseModel):
-    id: str
-    name: str
-    sensor: str
-    task_type: str
-    model: str
-    target_device: str
-    model_file: str
-    model_file_checksum: str
+    id: str = Field(default="null")
+    name: str = Field(default="null") 
+    sensor: str = Field(default="null")
+    task_type: str = Field(default="null")
+    model: str = Field(default="null")
+    target_device: str = Field(default="null")
+    model_file: str = Field(default="null")
+    model_file_checksum: str = Field(default="null")
 
-class Model1(BaseModel):
+class Model(BaseModel):
     session: Session
     sensor: Sensor
-
-class Model2(BaseModel):
-    session: Session
-    sensor: Sensor
-    project: Project
-    inference: bool
+    project: Optional[Project]
+    inference: Optional[bool]
 
 # PUT call endpoint for starting sensor session by running pipeline
-@app.put('/sensor-session/{id}',status_code=202)
-def start_sensor_session(id,x: Model2):
+@app.put('/sensor-session/{id}',status_code=response_code.ACCEPTED.value)
+def start_sensor_session(id,x: Model):
     global ss_id
     global rawvideo_process
     global inference_process
     global sensor_session
+    global cwd
     process_name="node"
     count = 0
     for proc in psutil.process_iter():
@@ -114,9 +111,9 @@ def start_sensor_session(id,x: Model2):
             break
     if(count == 0):
         raise HTTPException(
-            status_code=404, detail="sensor session not found!!")
+            status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
     if(id != ss_id):
-         raise HTTPException(status_code=400, detail="Invalid ID supplied")
+         raise HTTPException(status_code=response_code.BAD_REQUEST.value, detail=response_detail.INVALID_ID.value)
     if(x.inference == False):
         if rawvideo_process is None or not rawvideo_process.is_alive():
             rawvideo_process = RawvideoProcess()
@@ -125,16 +122,17 @@ def start_sensor_session(id,x: Model2):
             for proc in psutil.process_iter():
                 if process_name in proc.name():
                     pid = proc.pid
+                    print(pid)
             x.session.data_pipeline_pid=pid
             x.session.data_pipeline_status="up"
             sensor_session = x.dict()
             return x
         else:
             raise HTTPException(
-                status_code=409, detail="Other raw video streaming in progress..!")
+                status_code=response_code.CONFLICT.value, detail=response_detail.SESSION_CONFLICT.value)
     else:
         count = 0
-        for path in glob.iglob('/opt/edge_ai_apps/apps_python/projects/**',recursive=True):
+        for path in glob.iglob('{}/../../projects/**'.format(cwd),recursive=True):
             if os.path.isfile(path):
                 try:
                     with open(path,'r+') as config:
@@ -147,7 +145,7 @@ def start_sensor_session(id,x: Model2):
 
         if(count == 0):
             raise HTTPException(
-                status_code=404, detail="project doesnt exist")
+                status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
         else:
             if inference_process is None or not inference_process.is_alive():
                 inference_process = InferenceProcess()
@@ -155,22 +153,23 @@ def start_sensor_session(id,x: Model2):
                 return {"status": f"Inference pipeline has been initiated"}
             else:
                 raise HTTPException(
-                     status_code=409, detail="Other inference in progress..!")
+                     status_code=response_code.CONFLICT.value, detail=response_detail.SESSION_CONFLICT.value)
 
 # POST call endpoint for initiating sensor session by starting server
-@app.post('/sensor-session',status_code=202)
+@app.post('/sensor-session',status_code=response_code.ACCEPTED.value)
 def initiate_sensor_session(x: Sensor):
     global ss_id
     global sensor_session
+    global cwd
     count = 0
+    line_count = 0
     i=0
     process_name="node"
     pid=None
-    global p
     id = subprocess.check_output("./get_videono.sh")
     if(len(id) == 0):
         raise HTTPException(
-            status_code=405, detail="invalid input ")
+            status_code=response_code.METHOD_NOT_ALLOWED.value, detail=response_detail.INVALID_INPUT.value)
     else:
         for line in id.split(b'\n'):
             i=i+1
@@ -179,86 +178,59 @@ def initiate_sensor_session(x: Sensor):
         id="dev/video" + (id[len(id)-1])
         if(id != x.device[0].id):
             raise HTTPException(
-                status_code=405, detail="invalid input ")
+                status_code=response_code.METHOD_NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
     for proc in psutil.process_iter():
         if process_name in proc.name():
             pid = proc.pid
             count = 1
             break
-    
+
     if(count != 1):
-        #raise HTTPException(
-         #   status_code=409, detail="sensor session already running..!!")
-        print("hello")
-        p = subprocess.Popen("node ../server/script6.js", shell=True)
-        time.sleep(2)
+   
+        p = subprocess.Popen("node ../server/script6.js",stdout=subprocess.PIPE,bufsize=1,universal_newlines=True,shell=True)
+        for line in p.stdout:
+            output = line.rstrip()
+            print(output)
+            line_count = line_count + 1
+            if(line_count == 2):
+                break
+        for proc in psutil.process_iter():
+            if process_name in proc.name():
+                pid = proc.pid
         ss_id = str(uuid.uuid4())
-        y=Model1(session={
-            "id": ss_id,
-            "http_port": 8080,
-            "http_url": "/stream",
-            "http_status": "started",
-            "http_pid": p.pid + 1,
-            "ws_port": 0,
-            "ws_url": "",
-            "ws_status": "down",
-            "ws_pid": 0,
-            "udp_server_port": 8081,
-            "udp_client_port": 0,
-            "udp_status": "started",
-            "udp_pid": p.pid +1,
-            "tcp_server_port": 0,
-            "tcp_client_port": 0,
-            "tcp_status": "down",
-            "tcp_pid": 0,
-            "data_pipeline_status": "down",
-            "data_pipeline_pid": 0
-            },
-            sensor={
-            "name": x.name,
-            "id": x.id,
-            "type": x.type,
-            "device": [
-                {
-                "id": x.device[0].id,
-                "type": x.device[0].type,
-                "description": x.device[0].description,
-                "status": x.device[0].status
-                }
-            ]
-            })
-        sensor_session = y.dict()
-        return y
+        session = Model(session = { "id":ss_id, "http_status":"started", "http_pid":p.pid + 1, "udp_status":"started", "udp_pid":p.pid + 1, "data_pipeline_status":"down","data_pipeline_pid":0},sensor = { "name":x.name, "id":x.id, "type":x.type, "device": [{"id":x.device[0].id, "type":x.device[0].type, "description":x.device[0].type, "status":x.device[0].status}]})
+        sensor_session = session.dict()
+        return session
     return sensor_session
 
 #GET endpoint for getting sensor session details
-@app.get('/sensor-session')
+@app.get('/sensor-session',status_code=200)
 def get_sensor_session():
     global ss_id
     global sensor_session
     if(sensor_session==None):
          raise HTTPException(
-            status_code=404, detail="Sensor session not found")
+            status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
     else:
         return sensor_session
 
 #GET endpoint for getting sensor session details using id
-@app.get('/sensor-session/{id}')
+@app.get('/sensor-session/{id}',status_code=200)
 def get_sensor_session_id(id):
     global ss_id
     global sensor_session
     if(sensor_session==None):
          raise HTTPException(
-            status_code=404, detail="Sensor session not found")
+            status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
     print(sensor_session["session"]["id"])
     if(id != sensor_session["session"]["id"]):
         raise HTTPException(
-            status_code=400, detail="Invalid id")
+            status_code=response_code.BAD_REQUEST.value, detail=response_detail.INVALID_ID.value)
     else:
         return sensor_session
 
 #DELETE sensor session 
-@app.delete('/sensor-session/{id}',status_code=202)
+@app.delete('/sensor-session/{id}',status_code=response_code.ACCEPTED.value)
 def delete_sensor_session(id):
     global ss_id
     global sensor_session
@@ -266,7 +238,7 @@ def delete_sensor_session(id):
     count = 0
     if(id != ss_id):
         raise HTTPException(
-            status_code=400, detail="Invalid id")
+            status_code=response_code.BAD_REQUEST.value, detail=response_detail.INVALID_ID.value)
     process_name="node"
     for proc in psutil.process_iter():
         if process_name in proc.name():
@@ -277,10 +249,10 @@ def delete_sensor_session(id):
             return("session deleted")
     if(count == 0):
         raise HTTPException(
-            status_code=404, detail="sensor session not found!!")
+            status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
 
 #DELETE datapipeline of particular session    
-@app.delete('/sensor-session/{id}/dpipe',status_code=202)
+@app.delete('/sensor-session/{id}/dpipe',status_code=response_code.ACCEPTED.value)
 def delete_data_pipeline(id):
     global rawvideo_process
     global inference_process
@@ -288,7 +260,7 @@ def delete_data_pipeline(id):
     pid=None
     if(id != ss_id):
         raise HTTPException(
-            status_code=400, detail="Invalid id")
+            status_code=response_code.BAD_REQUEST.value, detail=response_detail.INVALID_ID.value)
     if rawvideo_process is not None and rawvideo_process.is_alive():
         process_name="python_gst.py"
         for proc in psutil.process_iter():
@@ -300,7 +272,7 @@ def delete_data_pipeline(id):
         return("data pipleine stopped")
     else:
         raise HTTPException(
-            status_code=404, detail="No session found")
+            status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
     
     if inference_process is not None and inference_process.is_alive():
         process_name="app_edgeai.py"
@@ -311,10 +283,10 @@ def delete_data_pipeline(id):
         return 
     else:
         raise HTTPException(
-            status_code=404, detail="No running inference instance found..!!")
+            status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
     
 #GET call endpoint to get sensor details
-@app.get('/sensor') # get sensor details
+@app.get('/sensor',status_code=200) # get sensor details
 def get_sensor():   
     i=0
     j=0
@@ -348,26 +320,14 @@ def get_sensor():
                 Id=(devices[j]['id']).decode()
             j=j-1
 
-        sensor= [{
-        "name": name,
-        "id": Id,
-        "type": type,
-        "device": [
-        {
-            "id": id,
-            "type": type,
-            "description": description,
-            "status": status
-        }
-        ]
-        }]
+        sensor = [Sensor(name = name,id = Id, type = "Webcam", device = [DeviceItem(id = id,type = type, description = description, status = status)])]
         return sensor
     else:
         raise HTTPException(
-            status_code=404, detail="No sensor found")
+            status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
 
 #GET call endpoint to get sensor details using id
-@app.get('/sensor/{id}') # get sensor details by id
+@app.get('/sensor/{id}',status_code=200) # get sensor details by id
 def get_sensor_byid(id):
     k=0
     j=0
@@ -393,7 +353,7 @@ def get_sensor_byid(id):
         j=j-1  
     if c==0:
         raise HTTPException(
-            status_code=404, detail="No sensor found")
+            status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
 
     id = subprocess.check_output("./get_videono.sh")
     if(id):
@@ -406,132 +366,27 @@ def get_sensor_byid(id):
         description="device available for capture"
         status="available"
 
-    sensor= [{
-    "name": name,
-    "id": Id,
-    "type": type,
-    "device": [
-      {
-        "id": id,
-        "type": type,
-        "description": description,
-        "status": status
-        }
-    ]
-    }]
+    sensor = [Sensor(name = name,id = Id, type = "Webcam", device = [DeviceItem(id = id,type = type, description = description, status = status)])]
     return sensor
 
-# DUMMY POST call endpoint for triggering start_inference function
-@app.post('/start_inference')
-def start_inference(x: Project):
-    print("Starting inference...!!!")
-    global inference_process
-    if inference_process is None or not inference_process.is_alive():
-        inference_process = InferenceProcess()
-        inference_process.start()
-        inference_process.join()
-        return {"status": f"Inference pipeline for project '{x.project}' has initiated"}
-    else:
-        raise HTTPException(
-            status_code=404, detail="Other inference in progress..!")
-
-
-# DUMMY POST call endpoint for triggering stop_inference function
-@app.post('/stop_inference')
-def stop_inference():
-    print("Stopping inference...!!!")
-    global inference_process
-    if inference_process is not None and inference_process.is_alive():
-        pid = None
-        process_name="app_edgeai.py"
-        for proc in psutil.process_iter():
-            if process_name in proc.name():
-                pid = proc.pid
-                print(pid)
-                os.kill(pid,2)
-        return {"status": "Inference pipeline stopped"}
-    else:
-        raise HTTPException(
-            status_code=404, detail="No running inference instance found..!!")
-
-#DUMMY POST call endpoint to start raw video stream
-@app.post('/start_raw_videostream')
-def start_raw_videostream():
-    print("starting raw video streamin")
-    global rawvideo_process
-    if rawvideo_process is None or not rawvideo_process.is_alive():
-        rawvideo_process = RawvideoProcess()
-        rawvideo_process.start()
-        rawvideo_process.join()
-        return {"status": "Raw video streaming has initiated"}
-    else:
-        raise HTTPException(
-            status_code=404, detail="Other raw video streamin in progress..!")
-
-#DUMMY POST call to switch pipeline
-@app.post('/switch_pipeline')
-def switch_pipeline():
-    print("switching pipeline")
-    global inference_process
-    global rawvideo_process
-    if inference_process is not None and inference_process.is_alive():
-        pid = None
-        process_name="app_edgeai.py"
-        for proc in psutil.process_iter():
-            if process_name in proc.name():
-                pid = proc.pid
-                print(pid)
-                os.kill(pid,2)
-                time.sleep(2)
-                
-                if rawvideo_process is None or not rawvideo_process.is_alive():
-                    rawvideo_process = RawvideoProcess()
-                    rawvideo_process.start()
-                    rawvideo_process.join()
-                    return {"status": "Raw video streaming has initiated"}
-                else:
-                    raise HTTPException(
-                        status_code=404, detail="Other raw video streamin in progress..!")
-        return {"status": "Inference pipeline switched"}
-    else:
-        raise HTTPException(
-            status_code=404, detail="No running inference instance found..!!")
-
-#DUMMY POST call to stop raw video streaming
-@app.post('/stop_raw_videostream')
-def stop_raw_videostream():
-    print("Stopping raw video streaming...!!!")
-    global rawvideo_process
-    if rawvideo_process is not None and rawvideo_process.is_alive():
-        pid = None
-        process_name="python_gst.py"
-        for proc in psutil.process_iter():
-            if process_name in proc.name():
-                pid = proc.pid
-                print(pid)
-                os.kill(pid,2)
-        return {"status": "raw video stream pipeline stopped"}
-    else:
-        raise HTTPException(
-            status_code=404, detail="No running raw video streaming instance found..!!")
-
-
 #POST call endpoint to create project
-@app.post('/project')
+@app.post('/project',status_code=201)
 def post_project(x: Project):
+    global cwd
     project = x.dict()
-    if(os.path.exists('../../projects/{}_{}'.format(x.id,x.name))):
-        raise HTTPException(status_code=409, detail="Project already exists")
-    os.system('mkdir ../../projects/{}_{}'.format(x.id,x.name))
-    with open("../../projects/{}_{}/project.config".format(x.id,x.name), "w") as outfile:
+    if(os.path.exists('{}/../../projects/{}_{}'.format(cwd,x.id,x.name))):
+        raise HTTPException(status_code=response_code.CONFLICT.value, detail=response_detail.PROJECT_CONFLICT.value)
+    os.system('mkdir {}/../../projects/{}_{}'.format(cwd,x.id,x.name))
+    with open("{}/../../projects/{}_{}/project.config".format(cwd,x.id,x.name), "w") as outfile:
         json.dump(project, outfile)
-        return("Project successfully registered")
+        return(response_detail.CREATED.value)
 
 #POST call endpoint to upload model
-@app.post('/project/{id}/model')
+@app.post('/project/{id}/model',status_code=201)
 async def upload_file(id,file: UploadFile = File(...)):
     count = 0
-    for path in glob.iglob('/opt/edge_ai_apps/apps_python/projects/**',recursive=True):
+    global cwd
+    for path in glob.iglob('{}/../../projects/**'.format(cwd),recursive=True):
         if os.path.isfile(path): # filter dirs
             print(path)
             try:
@@ -548,15 +403,15 @@ async def upload_file(id,file: UploadFile = File(...)):
                             f.write(content)
                             f.close()
                             print(file.filename)
-                            cmd = 'tar -xvf {} -C /opt/edge_ai_apps/apps_python/projects/{}_{}/'.format(file.filename,project['id'],project['name'])
+                            cmd = 'tar -xvf {} -C {}/../../projects/{}_{}/'.format(file.filename,cwd,project['id'],project['name'])
                             print(cmd)
                             os.system(cmd)
-                            model_file = subprocess.Popen(['ls', '../../projects/{}_{}/model/'.format(project['id'],project['name'])],
+                            model_file = subprocess.Popen(['ls', '{}/../../projects/{}_{}/model/'.format(cwd,project['id'],project['name'])],
                                 stdout=subprocess.PIPE,
                                 bufsize=1,
                                 universal_newlines=True).communicate()[0]
                             print(model_file)
-                            path = '../../projects/{}_{}/model/{}'.format(project['id'],project['name'],model_file.strip())
+                            path = '{}/../../projects/{}_{}/model/{}'.format(cwd,project['id'],project['name'],model_file.strip())
                             model_checksum = hashlib.md5(open(path,'rb').read()).hexdigest()
                             project['model_file_checksum']=model_checksum
                             project['model_file']=model_file.strip()
@@ -569,15 +424,16 @@ async def upload_file(id,file: UploadFile = File(...)):
                 
     if(count == 0):
         raise HTTPException(
-            status_code=404, detail="project doesnt exist/invalid id")
+            status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
     else:
-        return("model uploaded successfully")
+        return(response_detail.CREATED.value)
 
 #GET call endpoint to get project details
-@app.get('/project/{id}')
+@app.get('/project/{id}',status_code=200)
 def get_project_id(id):
     count = 0
-    for path in glob.iglob('/opt/edge_ai_apps/apps_python/projects/**',recursive=True):
+    global cwd
+    for path in glob.iglob('{}/../../projects/**'.format(cwd),recursive=True):
         if os.path.isfile(path): # filter dirs
             print(path)
             try:
@@ -592,15 +448,16 @@ def get_project_id(id):
 
     if(count == 0):
         raise HTTPException(
-            status_code=404, detail="project doesnt exist")
+            status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
     else:
         return(project)
 
 #DELETE call endpoint to delete project
-@app.delete('/project/{id}')
+@app.delete('/project/{id}',status_code=200)
 def delete_project(id):
     count = 0
-    for path in glob.iglob('/opt/edge_ai_apps/apps_python/projects/**',recursive=True):
+    global cwd
+    for path in glob.iglob('{}/../../projects/**'.format(cwd),recursive=True):
         if os.path.isfile(path): # filter dirs
             print(path)
             try:
@@ -609,7 +466,7 @@ def delete_project(id):
                     print(project)
                     print(type(project['id']))
                     if(int(project['id']) == int(id)):
-                        os.system('rm -r ../../projects/{}_{}'.format(project['id'],project['name']))
+                        os.system('rm -r {}/../../projects/{}_{}'.format(cwd,project['id'],project['name']))
                         count = count + 1
                         break
             except:
@@ -617,12 +474,12 @@ def delete_project(id):
 
     if(count == 0):
         raise HTTPException(
-            status_code=404, detail="project doesnt exist")
+            status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
     else:
         return("model deleted successfully")
 
 if __name__ == "__main__":
-    uvicorn.run("device_agent:app",
+    uvicorn.run("device_agent_copy:app",
                 host="0.0.0.0", port=8000, reload=True)
 
 '''
