@@ -476,8 +476,10 @@ def post_project(x: Project):
     global cwd
     project = x.dict()
     if(os.path.exists('{}/../../../../projects/{}'.format(cwd,x.id))):
-        raise HTTPException(status_code=response_code.CONFLICT.value, detail=response_detail.PROJECT_CONFLICT.value)
-    os.system('mkdir {}/../../../../projects/{}'.format(cwd,x.id))
+        #raise HTTPException(status_code=response_code.CONFLICT.value, detail=response_detail.PROJECT_CONFLICT.value)
+        print("project exist")
+    else:
+        os.system('mkdir {}/../../../../projects/{}'.format(cwd,x.id))
     with open("{}/../../../../projects/{}/project.config".format(cwd,x.id), "w") as outfile:
         json.dump(project, outfile)
         return(response_detail.CREATED.value)
