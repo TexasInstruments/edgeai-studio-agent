@@ -23,12 +23,13 @@ from definitions import response_code,response_detail,server_details
 import yaml
 import math
 app = FastAPI()
-app = FastAPI()
 
 active_connections: List[WebSocket] = []
 origins = [
 "http://localhost",
 "http://localhost:3000",
+"http://localhost:2000",
+"*",
 ]
 app.add_middleware(
 CORSMiddleware,
@@ -116,28 +117,43 @@ class ConnectionManager:
 
    def disconnect(self, websocket: WebSocket):
       self.active_connections.remove(websocket)
-      #self.active_connections.close(websocket)
 
    async def send_personal_message(self, message: str, websocket: WebSocket):
       await websocket.send_text(message)
 
-   async def broadcast(self, a):
+   async def broadcast_log(self, a):
+      for connection in self.active_connections:
+         await connection.send_json(a)
+   async def broadcast_inference(self, a):
       for connection in self.active_connections:
          await connection.send_json(a)
 
-manager = ConnectionManager()
+manager1 = ConnectionManager()
+manager2 = ConnectionManager()
 
 #websocket endpoint to send inference log
-@app.websocket("/ws/{client_id}")
+@app.websocket("/ws/{client_id}/log")
 async def websocket_endpoint(websocket: WebSocket,client_id: int):
-    await manager.connect(websocket)
+    await manager1.connect(websocket)
     try:
       while True:
          data = await websocket.receive_text()
-         await manager.broadcast(data)
+         await manager1.broadcast_log(data)
     except Exception as e:
-        manager.disconnect(websocket)
-        await manager.broadcast(f"websocket disconnected")
+        manager1.disconnect(websocket)
+        #await manager1.broadcast(f"websocket disconnected")
+
+#websocket endpoint to send inference log
+@app.websocket("/ws/{client_id}/inference")
+async def websocket_endpoint(websocket: WebSocket,client_id: int):
+    await manager2.connect(websocket)
+    try:
+      while True:
+         data = await websocket.receive_text()
+         await manager2.broadcast_inference(data)
+    except Exception as e:
+        manager2.disconnect(websocket)
+        #await manager2.broadcast(f"websocket disconnected")
 
 # PUT call endpoint for starting sensor session by running pipeline
 @app.put('/sensor-session/{id}',status_code=response_code.ACCEPTED.value)
@@ -194,10 +210,10 @@ def start_sensor_session(id,x: Model):
                                 print("open dataset ")
                                 categories = {w['id']:w['name'] for w in yaml.safe_load(f.read())["categories"]}
                                 print(categories)
-                            with open('{}/../../classnames.py'.format(cwd),'a') as f:
+                            #with open('{}/../../classnames.py'.format(cwd),'a') as f:
                                 
-                                f.write("modelmaker = ")
-                                json.dump(categories,f)
+                                #f.write("modelmaker = ")
+                                #json.dump(categories,f)
 
                             break
                 except:
@@ -218,7 +234,7 @@ def start_sensor_session(id,x: Model):
                 keyCount  = int(len(y)/2)
                 print(keyCount)
 
-                model = {"model{}".format(keyCount):{"model_path":"{}".format(path),"viz_threshold":0.6}}
+                model = {"model{}".format(keyCount):{"model_path":"{}".format(path),"viz_threshold":0.2}}
                 print(y["models"])
                 y["models"].update(model)
                 print(y)
@@ -376,7 +392,7 @@ def delete_data_pipeline(id):
                     sensor_session["session"]["data_pipeline_pid"]=0
                     sensor_session["session"]["ws_status"]="down"
                     sensor_session["session"]["ws_pid"]=0
-                    os.system("sed -i '$d' {}/../../classnames.py".format(cwd)) 
+                    #os.system("sed -i '$d' {}/../../classnames.py".format(cwd)) 
 
             return(response_detail.ACCEPTED.value) 
         else:
@@ -485,10 +501,13 @@ async def upload_model(id,file: UploadFile = File(...)):
                         print(name)
                         with open(file.filename, 'wb') as f:
                             content = await file.read()
-                            f.write(content)
+                            f.write(contents)
                             f.close()
                             print(file.filename)
-                            cmd = 'tar -xvf {} -C {}/../../../../projects/{}/'.format(file.filename,cwd,project['id'])
+                            os.system('cp {} {}/../../../../projects/{}/'.format(file.filename,cwd,project['id']))
+                            os.system('rm {}'.format(file.filename))
+                            #cmd = 'tar -xvf {} -C {}/../../../../projects/{}/'.format(file.filename,cwd,project['id'])
+                            cmd = 'tar -xvf {}/../../../../projects/{}/{}'.format(cwd,project['id'],file.filename)
                             print(cmd)
                             os.system(cmd)
                             with open('{}/../../../../projects/{}/param.yaml'.format(cwd,project['id']),'r+') as f:
