@@ -503,13 +503,13 @@ async def upload_model(id,file: UploadFile = File(...)):
                         print(name)
                         with open(file.filename, 'wb') as f:
                             content = await file.read()
-                            f.write(contents)
-                            f.close()
+                            f.write(content)
+                            #f.close()
                             print(file.filename)
                             os.system('cp {} {}/../../../../projects/{}/'.format(file.filename,cwd,project['id']))
                             os.system('rm {}'.format(file.filename))
                             #cmd = 'tar -xvf {} -C {}/../../../../projects/{}/'.format(file.filename,cwd,project['id'])
-                            cmd = 'tar -xvf {}/../../../../projects/{}/{}'.format(cwd,project['id'],file.filename)
+                            cmd = 'tar -xvf {}/../../../../projects/{}/{} -C {}/../../../../projects/{}/'.format(cwd,project['id'],file.filename,cwd,project['id'])
                             print(cmd)
                             os.system(cmd)
                             with open('{}/../../../../projects/{}/param.yaml'.format(cwd,project['id']),'r+') as f:
