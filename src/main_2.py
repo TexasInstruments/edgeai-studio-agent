@@ -47,5 +47,5 @@ class RawvideoProcess(Process):
         super(RawvideoProcess, self).__init__()
     def run(self):
         print("raw video stream thread started....")
-        run_loop('RAWVIDEO')
+        run_loop(None,'RAWVIDEO')
         print("raw video stream thread completed...!!!")
