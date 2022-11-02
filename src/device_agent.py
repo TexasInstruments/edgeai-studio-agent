@@ -231,13 +231,14 @@ def start_sensor_session(id,x: Model):
             with open(config_yaml_path,'r+') as f:
                 y = json.dumps(yaml.load(f,Loader=yaml.FullLoader))
                 y=json.loads(y)
-                keyCount  = int(len(y)/2)
+                #keyCount  = int(len(y)/2)
+                keyCount  = int(len(y["models"])-1)
                 print(keyCount)
 
                 model = {"model{}".format(keyCount):{"model_path":"{}".format(path),"viz_threshold":0.2}}
-                print(y["models"])
+                #print(y["models"])
                 y["models"].update(model)
-                print(y)
+                #print(y)
                 #y["flows"]["flow0"]["models"] = ['model{}'.format(keyCount)]
                 #print(y)
             os.rename(config_yaml_path,'{}/../../../configs/copy.yaml'.format(cwd))
