@@ -369,8 +369,8 @@ def delete_data_pipeline(id):
     global inference_process
     global sensor_session
     global ss_id
-    global sensor
-    global sensor_count
+    #global sensor
+    #global sensor_count
     pid=None
     if(id != ss_id):
         raise HTTPException(
@@ -399,9 +399,9 @@ def delete_data_pipeline(id):
                     sensor_session["session"]["data_pipeline_pid"]=0
                     sensor_session["session"]["ws_status"]="down"
                     sensor_session["session"]["ws_pid"]=0
-                    sensor.clear()
-                    sensor_count = 0
-                    print("sensor after clearing is",sensor)
+                    #sensor.clear()
+                    #sensor_count = 0
+                    #print("sensor after clearing is",sensor)
                     #os.system("sed -i '$d' {}/../../classnames.py".format(cwd)) 
 
             return(response_detail.ACCEPTED.value) 
@@ -420,6 +420,9 @@ def get_sensor():
     global sensor
     global sensor_count 
     print("get sensor details called")
+    if len(sensor) != 0:
+        sensor.clear()
+        sensor_count = 0
     data = subprocess.check_output("./get_videono.sh")
     if(len(data) != 0):
         for line in data.split(b'\n'):
