@@ -15,7 +15,7 @@ def run_loop(model_config,name=''):
         print(model_config)
         ws1 = create_connection("ws://localhost:8000/ws/1/log")
         ws2= create_connection("ws://localhost:8000/ws/1/inference")
-        time.sleep(1)
+        time.sleep(0.5)
         process = subprocess.Popen('../../app_edgeai.py ../../../configs/{}.yaml'.format(model_config),
                             stdout=subprocess.PIPE,
                             bufsize=1,
@@ -63,7 +63,7 @@ def run_loop(model_config,name=''):
                 time.sleep(0.1)
                 #ws2.send(json.dumps(infer_param))
                 ws2.send(str(infer_param))
-                time.sleep(0.1)
+                #time.sleep(0.1)
             time.sleep(0.1)
             ws1.send(line)
             time.sleep(0.1)
