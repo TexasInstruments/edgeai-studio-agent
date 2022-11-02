@@ -27,7 +27,6 @@ import sys
 import base64
 import aiofiles
 app = FastAPI()
-app = FastAPI()
 
 active_connections: List[WebSocket] = []
 origins = [
@@ -122,28 +121,43 @@ class ConnectionManager:
 
    def disconnect(self, websocket: WebSocket):
       self.active_connections.remove(websocket)
-      #self.active_connections.close(websocket)
 
    async def send_personal_message(self, message: str, websocket: WebSocket):
       await websocket.send_text(message)
 
-   async def broadcast(self, a):
+   async def broadcast_log(self, a):
+      for connection in self.active_connections:
+         await connection.send_json(a)
+   async def broadcast_inference(self, a):
       for connection in self.active_connections:
          await connection.send_json(a)
 
-manager = ConnectionManager()
+manager1 = ConnectionManager()
+manager2 = ConnectionManager()
 
 #websocket endpoint to send inference log
-@app.websocket("/ws/{client_id}")
+@app.websocket("/ws/{client_id}/log")
 async def websocket_endpoint(websocket: WebSocket,client_id: int):
-    await manager.connect(websocket)
+    await manager1.connect(websocket)
     try:
       while True:
          data = await websocket.receive_text()
-         await manager.broadcast(data)
+         await manager1.broadcast_log(data)
     except Exception as e:
-        manager.disconnect(websocket)
-        await manager.broadcast(f"websocket disconnected")
+        manager1.disconnect(websocket)
+        #await manager1.broadcast(f"websocket disconnected")
+
+#websocket endpoint to send inference log
+@app.websocket("/ws/{client_id}/inference")
+async def websocket_endpoint(websocket: WebSocket,client_id: int):
+    await manager2.connect(websocket)
+    try:
+      while True:
+         data = await websocket.receive_text()
+         await manager2.broadcast_inference(data)
+    except Exception as e:
+        manager2.disconnect(websocket)
+        #await manager2.broadcast(f"websocket disconnected")
 
 # PUT call endpoint for starting sensor session by running pipeline
 @app.put('/sensor-session/{id}',status_code=response_code.ACCEPTED.value)
@@ -221,13 +235,14 @@ def start_sensor_session(id,x: Model):
             with open(config_yaml_path,'r+') as f:
                 y = json.dumps(yaml.load(f,Loader=yaml.FullLoader))
                 y=json.loads(y)
-                keyCount  = int(len(y)/2)
+                #keyCount  = int(len(y)/2)
+                keyCount  = int(len(y["models"])-1)
                 print(keyCount)
 
-                model = {"model{}".format(keyCount):{"model_path":"{}".format(path),"viz_threshold":0.6}}
-                print(y["models"])
+                model = {"model{}".format(keyCount):{"model_path":"{}".format(path),"viz_threshold":0.2}}
+                #print(y["models"])
                 y["models"].update(model)
-                print(y)
+                #print(y)
                 #y["flows"]["flow0"]["models"] = ['model{}'.format(keyCount)]
                 #print(y)
             os.rename(config_yaml_path,'{}/../../../configs/copy.yaml'.format(cwd))
