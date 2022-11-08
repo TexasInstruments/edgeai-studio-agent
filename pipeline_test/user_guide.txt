@@ -1,4 +1,4 @@
--Initaially run req.sh script file for installing two packages for running node server in native system.
+-Initially run req.sh script file for installing two packages for running node server in native system.
 -Execute command: python3 test_gst.py raw
 -The moment udp server starts running, within 5 seconds go to browser, open url: http://ip-address of board:8080 and click on the button below the video box named 'Live Inference video'.
 -width, height, framerate can be configured in test_gst.py.
