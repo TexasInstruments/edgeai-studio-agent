@@ -154,7 +154,8 @@ async def websocket_endpoint(websocket: WebSocket,client_id: int):
     try:
       while True:
          data = await websocket.receive_text()
-         await manager2.broadcast_inference(data)
+         infer_data = json.loads(data)
+         await manager2.broadcast_inference(infer_data)
     except Exception as e:
         manager2.disconnect(websocket)
         #await manager2.broadcast(f"websocket disconnected")
@@ -241,7 +242,7 @@ def start_sensor_session(id,x: Model):
 
                 model = {"model{}".format(keyCount):{"model_path":"{}".format(path),"viz_threshold":0.2}}
                 #print(y["models"])
-                y["models"].update(model)
+                #y["models"].update(model)
                 #print(y)
                 #y["flows"]["flow0"]["models"] = ['model{}'.format(keyCount)]
                 #print(y)

@@ -60,9 +60,7 @@ def run_loop(model_config,name=''):
                             "dtype": "float"
                         }
                 }
-                time.sleep(0.1)
-                #ws2.send(json.dumps(infer_param))
-                ws2.send(str(infer_param))
+                ws2.send(json.dumps(infer_param))
                 #time.sleep(0.1)
             time.sleep(0.1)
             ws1.send(line)
