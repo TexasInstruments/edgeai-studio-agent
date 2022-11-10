@@ -154,7 +154,8 @@ async def websocket_endpoint(websocket: WebSocket,client_id: int):
     try:
       while True:
          data = await websocket.receive_text()
-         await manager2.broadcast_inference(data)
+         infer_data = json.loads(data)
+         await manager2.broadcast_inference(infer_data)
     except Exception as e:
         manager2.disconnect(websocket)
         #await manager2.broadcast(f"websocket disconnected")
