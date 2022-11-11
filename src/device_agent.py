@@ -49,13 +49,13 @@ sensor_session=None
 sensor=[]
 sensor_count=0
 cwd = os.getcwd()
-global model_type
+project_dir = '/../../../../projects'
+#global model_type
 
-
-class model:
+""" class model:
     model_type = None
     def __init__(self, model_type):
-        self.model_type = model_type
+        self.model_type = model_type """
 
 # Define request-body using pydantic
 class Session(BaseModel):
@@ -168,6 +168,7 @@ def start_sensor_session(id,x: Model):
     global inference_process
     global sensor_session
     global cwd
+    global project_dir
     process_name="node"
     count = 0
     model_type=None
@@ -200,29 +201,27 @@ def start_sensor_session(id,x: Model):
     else:
         print("inside inference")
         pcount = 0
-        for path in glob.iglob('{}/../../../../projects/**'.format(cwd),recursive=True):
-            if os.path.isfile(path):
-                try:
-                    with open(path,'r+') as config:
-                        project = json.load(config)
+        #for path in glob.iglob('{}/../../../../projects/**'.format(cwd),recursive=True):
+        if os.path.isdir('{}{}/{}'.format(cwd,project_dir,x.project.id)):
+               
+            with open('{}{}/{}/project.config'.format(cwd,project_dir,x.project.id),'r+') as config:
+                project = json.load(config)
 
-                        if(project['id'] == x.project.id):
-                            print(x.project.id)
-                            pcount = pcount + 1
-                            print(pcount)
-                            path = '{}/../../../../projects/{}'.format(cwd,project['id'])
-                            with open('{}/dataset.yaml'.format(path),'r') as f:
-                                print("open dataset ")
-                                categories = {w['id']:w['name'] for w in yaml.safe_load(f.read())["categories"]}
-                                print(categories)
-                            #with open('{}/../../classnames.py'.format(cwd),'a') as f:
+                if(project['id'] == x.project.id):
+                    print(x.project.id)
+                    pcount = pcount + 1
+                    print(pcount)
+                    path = '{}{}/{}'.format(cwd,project_dir,project['id'])
+                    with open('{}/dataset.yaml'.format(path),'r') as f:
+                        print("open dataset ")
+                        categories = {w['id']:w['name'] for w in yaml.safe_load(f.read())["categories"]}
+                        print(categories)
+                    #with open('{}/../../classnames.py'.format(cwd),'a') as f:
                                 
-                                #f.write("modelmaker = ")
-                                #json.dump(categories,f)
+                        #f.write("modelmaker = ")
+                        #json.dump(categories,f)
 
-                            break
-                except:
-                    continue
+                
         if(pcount == 0):
             raise HTTPException(
                 status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
@@ -244,6 +243,7 @@ def start_sensor_session(id,x: Model):
                 #print(y["models"])
                 #y["models"].update(model)
                 #print(y)
+                
                 #y["flows"]["flow0"]["models"] = ['model{}'.format(keyCount)]
                 #print(y)
             os.rename(config_yaml_path,'{}/../../../configs/copy.yaml'.format(cwd))
@@ -485,7 +485,7 @@ def get_sensor_byid(id):
         return sensor[j]
     
 
-#POST call endpoint to create project
+'''#POST call endpoint to create project
 @app.post('/project',status_code=response_code.CREATED.value)
 def post_project(x: Project):
     global cwd
@@ -497,11 +497,29 @@ def post_project(x: Project):
         os.system('mkdir {}/../../../../projects/{}'.format(cwd,x.id))    
     with open("{}/../../../../projects/{}/project.config".format(cwd,x.id), "w") as outfile:
         json.dump(project, outfile)
+        return(response_detail.CREATED.value)'''
+
+#POST call endpoint to create project
+@app.post('/project',status_code=response_code.CREATED.value)
+def post_project(x: Project):
+    global cwd
+    project = x.dict()
+    dir_name = '{}/../../../../projects'.format(cwd)
+    for dir in os.listdir(dir_name):
+        path = os.path.join(dir_name, dir)
+        if len(path) != 0:
+            os.system('rm -r {}'.format(path))
+    os.system('mkdir {}/../../../../projects/{}'.format(cwd,x.id))    
+    with open("{}/../../../../projects/{}/project.config".format(cwd,x.id), "w") as outfile:
+        json.dump(project, outfile)
         return(response_detail.CREATED.value)
 
 #POST call endpoint to upload model
 @app.post('/project/{id}/model',status_code=response_code.CREATED.value)
 async def upload_model(id,file: UploadFile = File(...)):
+    global cwd
+    global project_dir
+
     print("FILE:",file)
     print("filename :",file.filename)
     filecontent= await file.read()
@@ -515,57 +533,52 @@ async def upload_model(id,file: UploadFile = File(...)):
         print('inside async')
         await f.write(filecontent)
     count = 0
-    global cwd
-    for path in glob.iglob('{}/../../../../projects/**'.format(cwd),recursive=True):
-        if os.path.isfile(path): 
-            try:
-               
-                with open(path,'r+') as config:
-                    project = json.load(config)
-                    print("project",project)
-                    print("project type",type(project['id']))
-                    if(project['id'] == id):
-                        count = count + 1
-                        name = project['name']
-                        print("name :",name)
-                        #with open(file.filename, 'wb') as f:
-                            #content = await file.read()
-                            #print("content type :",type(content))                            
-                            #f.write(content)
-                            #f.close()
-                            #print("file.filename :",file.filename)    
+    
+    if os.path.isdir('{}{}/{}'.format(cwd,project_dir,id)):
+           
+        with open('{}{}/{}/project.config'.format(cwd,project_dir,id),'r+') as config:
+            project = json.load(config)
+            print("project",project)
+            print("project type",type(project['id']))
+            if(project['id'] == id):
+                count = count + 1
+                name = project['name']
+                print("name :",name)
+                #with open(file.filename, 'wb') as f:
+                    #content = await file.read()
+                    #print("content type :",type(content))                            
+                    #f.write(content)
+                    #f.close()
+                    #print("file.filename :",file.filename)    
 
-                            #tar = tarfile.open('/opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent/src/yolox_s_lite_mmdet_20000101-010101_onnxrt_tda4vm.tar.gz')
-                            #print(tar.getnames()) 
-                            #tar.extractall('{}/../../../../projects/{}'.format(cwd,project['id']))
-                            #print('EXTRACTED') 
+                    #tar = tarfile.open('/opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent/src/yolox_s_lite_mmdet_20000101-010101_onnxrt_tda4vm.tar.gz')
+                    #print(tar.getnames()) 
+                    #tar.extractall('{}/../../../../projects/{}'.format(cwd,project['id']))
+                    #print('EXTRACTED') 
 
 
-                        tar = tarfile.open('/opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent/src/outputFile.tar.gz')
-                        print(tar.getnames()) 
-                        tar.extractall('{}/../../../../projects/{}'.format(cwd,project['id']))
-                        print('EXTRACTED') 
-                        os.remove('/opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent/src/outputFile.tar.gz')
+                tar = tarfile.open('/opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent/src/outputFile.tar.gz')
+                print(tar.getnames()) 
+                tar.extractall('{}/../../../../projects/{}'.format(cwd,project['id']))
+                print('EXTRACTED') 
+                os.remove('/opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent/src/outputFile.tar.gz')
 
-                        with open('{}/../../../../projects/{}/param.yaml'.format(cwd,project['id']),'r+') as f:
-                            model_param = json.dumps(yaml.load(f,Loader=yaml.FullLoader))
-                            print("model_param :",model_param)
-                            y=json.loads(model_param)
-                            model_path = y['session']['model_path']
-                            print("model_path :",model_path)
-                        path = '{}/../../../../projects/{}/{}'.format(cwd,project['id'],model_path)
-                        model_checksum = hashlib.md5(open(path,'rb').read()).hexdigest()
-                        print("model_checksum :",model_checksum)
-                        project['model_file_checksum']=model_checksum
-                        project['model_file']=model_path
-                        print("project['model_file'] :",project['model_file'])
-                        config.seek(0)
-                        json.dump(project,config)
-                        config.truncate()
-                        break
-            except Exception as e: 
-                print(e)
-                continue
+                with open('{}/../../../../projects/{}/param.yaml'.format(cwd,project['id']),'r+') as f:
+                    model_param = json.dumps(yaml.load(f,Loader=yaml.FullLoader))
+                    print("model_param :",model_param)
+                    y=json.loads(model_param)
+                    model_path = y['session']['model_path']
+                    print("model_path :",model_path)
+                path = '{}/../../../../projects/{}/{}'.format(cwd,project['id'],model_path)
+                model_checksum = hashlib.md5(open(path,'rb').read()).hexdigest()
+                print("model_checksum :",model_checksum)
+                project['model_file_checksum']=model_checksum
+                project['model_file']=model_path
+                print("project['model_file'] :",project['model_file'])
+                config.seek(0)
+                json.dump(project,config)
+                config.truncate()
+                
                 
     if(count == 0):
         raise HTTPException(
@@ -595,7 +608,7 @@ def get_projects():
     else:
         return(project_list)
 
-#GET call endpoint to get project details
+""" #GET call endpoint to get project details
 @app.get('/project/{id}',status_code=response_code.OK.value)
 def get_project_id(id):
     count = 0
@@ -644,7 +657,55 @@ def delete_project(id):
             status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
     else:
         return(response_detail.SUCCESS.value)
+ """
+ #GET call endpoint to get project details
+@app.get('/project/{id}',status_code=response_code.OK.value)
+def get_project_id(id):
+    count = 0
+    global cwd
+    global project_dir
+    #for path in glob.iglob('{}/../../../../projects/**'.format(cwd),recursive=True):
+    if os.path.isdir('{}{}/{}'.format(cwd,project_dir,id)): # filter dirs
+            #print(path)
+            
+        with open('{}{}/{}/project.config'.format(cwd,project_dir,id),'r+') as config:
+            project = json.load(config)
+            print(project)
+            if(project['id'] == id):
+                count = count + 1
+            
+    
+    print(count)
+    if(count == 0):
+        raise HTTPException(
+            status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
+    else:
+        return(project)
 
+#DELETE call endpoint to delete project
+@app.delete('/project/{id}',status_code=response_code.OK.value)
+def delete_project(id):
+    count = 0
+    global cwd
+    global project_dir
+    
+    if os.path.isdir('{}{}/{}'.format(cwd,project_dir,id)): # filter dirs
+        
+            
+        with open('{}{}/{}/project.config'.format(cwd,project_dir,id),'r+') as config:
+            project = json.load(config)
+            print(project)
+            print(type(project['id']))
+            if(project['id'] == id):
+                os.system('rm -r {}{}/{}'.format(cwd,project_dir,project['id']))
+                count = count + 1
+    
+    if(count == 0):
+        raise HTTPException(
+            status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
+    else:
+        return(response_detail.SUCCESS.value)
+ 
 if __name__ == "__main__":
     uvicorn.run("device_agent:app",
                 host="0.0.0.0", port=8000, reload=True, ws_ping_interval=math.inf, ws_ping_timeout=math.inf)
