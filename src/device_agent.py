@@ -396,6 +396,7 @@ def delete_data_pipeline(id):
                 if process_name in proc.name():
                     pid = proc.pid
                     os.kill(pid,2)
+                    inference_process.terminate()
                     sensor_session["session"]["data_pipeline_status"]="down"
                     sensor_session["session"]["data_pipeline_pid"]=0
                     sensor_session["session"]["ws_status"]="down"
@@ -405,7 +406,7 @@ def delete_data_pipeline(id):
                     #print("sensor after clearing is",sensor)
                     #os.system("sed -i '$d' {}/../../classnames.py".format(cwd)) 
 
-            return(response_detail.ACCEPTED.value) 
+                    return(response_detail.ACCEPTED.value) 
         else:
             raise HTTPException(
                 status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
