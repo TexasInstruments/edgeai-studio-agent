@@ -216,10 +216,10 @@ def start_sensor_session(id,x: Model):
                         print("open dataset ")
                         categories = {w['id']:w['name'] for w in yaml.safe_load(f.read())["categories"]}
                         print(categories)
-                    #with open('{}/../../classnames.py'.format(cwd),'a') as f:
+                    with open('{}/../../classnames.py'.format(cwd),'a') as f:
                                 
-                        #f.write("modelmaker = ")
-                        #json.dump(categories,f)
+                        f.write("modelmaker = ")
+                        json.dump(categories,f)
 
                 
         if(pcount == 0):
@@ -236,15 +236,17 @@ def start_sensor_session(id,x: Model):
                 y = json.dumps(yaml.load(f,Loader=yaml.FullLoader))
                 y=json.loads(y)
                 #keyCount  = int(len(y)/2)
-                keyCount  = int(len(y["models"])-1)
+                keyCount  = int(len(y["models"])
                 print(keyCount)
-
-                model = {"model{}".format(keyCount):{"model_path":"{}".format(path),"viz_threshold":0.2}}
+                if model_type == "object_detection":
+                    model = {"model{}".format(keyCount):{"model_path":"{}".format(path),"viz_threshold":0.6}}
+                if model_type == "image_classification":
+                    model = {"model{}".format(keyCount):{"model_path":"{}".format(path),"topN":1}}
                 #print(y["models"])
-                #y["models"].update(model)
+                y["models"].update(model)
                 #print(y)
                 
-                #y["flows"]["flow0"]["models"] = ['model{}'.format(keyCount)]
+                y["flows"]["flow0"]["models"] = ['model{}'.format(keyCount)]
                 #print(y)
             os.rename(config_yaml_path,'{}/../../../configs/copy.yaml'.format(cwd))
             with open('{}/../../../configs/copy.yaml'.format(cwd),'w') as fout:
@@ -254,6 +256,7 @@ def start_sensor_session(id,x: Model):
                 inference_process = InferenceProcess(model_type)
                 inference_process.start()
                 process_name="app_edgeai.py"
+                print("point 1")
                 for proc in psutil.process_iter():
                     if process_name in proc.name():
                         pid = proc.pid
@@ -263,8 +266,25 @@ def start_sensor_session(id,x: Model):
                 x.session.ws_status="up"
                 x.session.ws_pid=os.getpid()
                 sensor_session = x.dict()
+                print("point 2")
+                if inference_process is None or not inference_process.is_alive():
+                    os.system("sed -i '/modelmaker/d' {}/../../classnames.py".format(cwd)) 
+                    dir_name = '{}/../../../../projects'.format(cwd)
+                    for dir in os.listdir(dir_name):
+                        path = os.path.join(dir_name, dir)
+                        if len(path) != 0:
+                            os.system('rm -r {}'.format(path))
+                    x.session.data_pipeline_pid=0
+                    x.session.data_pipeline_status="down"
+                    x.session.ws_status="down"
+                    x.session.ws_pid=0
+                    sensor_session = x.dict()
 
-                return x
+                    raise HTTPException(
+                     status_code=response_code.CONFLICT.value, detail=response_detail.SESSION_CONFLICT.value)
+
+                else:
+                    return x
             else:
                 raise HTTPException(
                      status_code=response_code.CONFLICT.value, detail=response_detail.SESSION_CONFLICT.value)
@@ -405,9 +425,11 @@ def delete_data_pipeline(id):
                     #sensor_count = 0
                     #print("sensor after clearing is",sensor)
                     #os.system("sed -i '$d' {}/../../classnames.py".format(cwd)) 
-
+                    os.system("sed -i '/modelmaker/d' {}/../../classnames.py".format(cwd))
                     return(response_detail.ACCEPTED.value) 
         else:
+
+            os.system("sed -i '/modelmaker/d' {}/../../classnames.py".format(cwd)) 
             raise HTTPException(
                 status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
 
@@ -707,6 +729,38 @@ def delete_project(id):
         return(response_detail.SUCCESS.value)
  
 if __name__ == "__main__":
+    #global project_dir
+    count = 0
+    if not os.path.isdir('{}{}'.format(cwd,project_dir)):
+        os.system('mkdir {}{}'.format(cwd,project_dir)) 
+    
+    config_yaml_path = ['{}/../../../configs/image_classification.yaml'.format(cwd),'{}/../../../configs/object_detection.yaml'.format(cwd)]
+    for path in config_yaml_path:
+        with open(path, 'r') as f:
+            for index, line in enumerate(f):
+                if 'udpsink' in line:
+                    count = count + 1
+        if count == 0:
+            with open(path,'r+') as f:
+                y = json.dumps(yaml.load(f,Loader=yaml.FullLoader))
+                y=json.loads(y)
+                #keyCount  = int(len(y)/2)
+                keyCount  = int(len(y["outputs"]))
+                #print(keyCount)
+
+                sink = {"output{}".format(keyCount):{"sink":"udpsink host=127.0.0.1 port=8081","width":1920,"height":1080}}
+                #print(y["models"])
+                y["outputs"].update(sink)
+                #print(y)
+                
+                y["flows"]["flow0"]["outputs"] = ['output{}'.format(keyCount)]
+                #print(y)
+            #os.rename(path,'{}/../../../configs/copy.yaml'.format(cwd))
+            #with open('{}/../../../configs/copy.yaml'.format(cwd),'w') as fout:
+            with open(path,'w') as fout:
+                yaml.safe_dump(y,fout,sort_keys=False)
+            #os.rename('{}/../../../configs/copy.yaml'.format(cwd),path)
+            count = 0
     uvicorn.run("device_agent:app",
                 host="0.0.0.0", port=8000, reload=True, ws_ping_interval=math.inf, ws_ping_timeout=math.inf)
 
