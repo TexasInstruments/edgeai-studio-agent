@@ -28,9 +28,10 @@ def run_loop(model_config,name=''):
                 #print(pid)
         for line in process.stdout:
             line = line.rstrip()
-            #print(line)
-            totaltime = r"total time.*?\s+?(?P<inference_time>\d{1,5}\.\d{1,})\s+?m?s.*?from\s+(?P<sampples>\d+?)\s+?samples"
-            m = re.search(totaltime, line)
+            print(line)
+            #totaltime = r"total time.*?\s+?(?P<inference_time>\d{1,5}\.\d{1,})\s+?m?s.*?from\s+(?P<sampples>\d+?)\s+?samples"
+            inference = r"inference.*?\s+?(?P<inference_time>\d{1,5}\.\d{1,})\s+?m?s.*?from\s+(?P<sampples>\d+?)\s+?samples"
+            m = re.search(inference, line)
             if m is not None:
                 process2 = subprocess.Popen('ps -p {} -o %mem'.format(pid),
                             stdout=subprocess.PIPE,
@@ -67,8 +68,10 @@ def run_loop(model_config,name=''):
             time.sleep(0.1)
     elif name=='RAWVIDEO':
         cap = cv2.VideoCapture(2)
-        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        width = 640
+        height = 360
+        #width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        #height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         cap.release()
         cmd='./python_gst.py {} {}'.format(width,height)
 
