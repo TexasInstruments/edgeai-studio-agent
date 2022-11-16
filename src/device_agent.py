@@ -236,7 +236,7 @@ def start_sensor_session(id,x: Model):
                 y = json.dumps(yaml.load(f,Loader=yaml.FullLoader))
                 y=json.loads(y)
                 #keyCount  = int(len(y)/2)
-                keyCount  = int(len(y["models"])
+                keyCount  = int(len(y["models"]))
                 print(keyCount)
                 if model_type == "object_detection":
                     model = {"model{}".format(keyCount):{"model_path":"{}".format(path),"viz_threshold":0.6}}
