@@ -584,7 +584,7 @@ async def upload_model(id,file: UploadFile = File(...)):
         raise HTTPException(
             status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
     else:
-        return(response_detail.CREATED.value)
+        return(response_detail.CREATED.value,project['id'])
 
 #GET call endpoint to get project details
 @app.get('/project')
@@ -707,6 +707,7 @@ def delete_project(id):
         return(response_detail.SUCCESS.value)
  
 if __name__ == "__main__":
+    #if os.isdir('')
     uvicorn.run("device_agent:app",
                 host="0.0.0.0", port=8000, reload=True, ws_ping_interval=math.inf, ws_ping_timeout=math.inf)
 

@@ -6,7 +6,7 @@ var child = require('child_process');
 var EventEmitter = require('events').EventEmitter;
 let cors = require("cors");
 var bodyParser = require('body-parser')
-require('log-timestamp');   //adds timestamp in console.log()
+//require('log-timestamp');   //adds timestamp in console.log()
 
 var app = express();
 app.use(express.static(__dirname + '/'));
