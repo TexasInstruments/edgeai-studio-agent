@@ -216,10 +216,10 @@ def start_sensor_session(id,x: Model):
                         print("open dataset ")
                         categories = {w['id']:w['name'] for w in yaml.safe_load(f.read())["categories"]}
                         print(categories)
-                    with open('{}/../../classnames.py'.format(cwd),'a') as f:
-                                
-                        f.write("modelmaker = ")
-                        json.dump(categories,f)
+                    with open('{}/../../classnames.py'.format(cwd),'a') as fobj:
+                        fobj.writelines("\nmodelmaker="+str(categories))       
+                        #fobj.write(f"modelmaker = {json.dumps(categories)}")
+                        #json.dump(categories,f)
 
                 
         if(pcount == 0):

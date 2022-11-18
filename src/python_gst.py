@@ -32,7 +32,8 @@ if __name__ == '__main__':
     print(sys.argv[1])
     print(sys.argv[2])
     print("before play")
-    p = Gst.parse_launch(" v4l2src device=/dev/video2 ! videoconvert ! clockoverlay ! video/x-raw, width={}, height={}, framerate=10/1 ! x264enc tune=zerolatency speed-preset=superfast bitrate=128 ! video/x-h264,profile=high ! mp4mux fragment-duration=1 ! udpsink host=127.0.0.1 port=8081".format(sys.argv[1],sys.argv[2]))
+    #p = Gst.parse_launch(" v4l2src device=/dev/video2 ! videoconvert ! clockoverlay ! video/x-raw, width={}, height={}, framerate=10/1 ! x264enc tune=zerolatency speed-preset=superfast bitrate=128 ! video/x-h264,profile=high ! mp4mux fragment-duration=1 ! udpsink host=127.0.0.1 port=8081".format(sys.argv[1],sys.argv[2]))
+    p = Gst.parse_launch(" v4l2src device=/dev/video2 ! videoconvert ! video/x-raw, width={}, height={}, framerate=30/1, format=NV12 ! v4l2h264enc gop-size=30 ! h264parse ! matroskamux ! udpsink host=127.0.0.1  port=8081".format(sys.argv[1],sys.argv[2]))
     bus = p.get_bus()
     # allow bus to emit messages to main thread
     bus.add_signal_watch()
