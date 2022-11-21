@@ -302,23 +302,24 @@ def initiate_sensor_session(x: Sensor):
     j=0
     process_name="node"
     pid=None
-    while j < sensor_count:
-        if x.device[0].id==(sensor[j].device[0].id):
-            count = count + 1
-            break
-        j = j + 1
-    if(count==0):
+    #while j < sensor_count:
+    if x.device[0].id!=(sensor[0].device[0].id):
+        #count = count + 1
+        #break
+        #j = j + 1
+        #if(count==0):
         raise HTTPException(
                 status_code=response_code.METHOD_NOT_ALLOWED.value, detail=response_detail.INVALID_INPUT.value)
-    count = 0
+    #count = 0
     for proc in psutil.process_iter():
         if process_name in proc.name():
             pid = proc.pid
+            print(pid)
             count = 1
             break
-
-    if(count != 1):
-   
+    print('hi')
+    if count != 1:
+        print("before starting server")
         p = subprocess.Popen("node ../server/script6.js",stdout=subprocess.PIPE,bufsize=1,universal_newlines=True,shell=True)
         for line in p.stdout:
             output = line.rstrip()
@@ -433,7 +434,7 @@ def delete_data_pipeline(id):
             raise HTTPException(
                 status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
 
-#GET call endpoint to get sensor details
+""" #GET call endpoint to get sensor details
 @app.get('/sensor',status_code=response_code.OK.value) # get sensor details
 def get_sensor():   
     i = 0
@@ -486,8 +487,62 @@ def get_sensor():
     else:
         raise HTTPException(
             status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
+ """
+#GET call endpoint to get sensor details
+@app.get('/sensor',status_code=response_code.OK.value) # get sensor details
+def get_sensor():   
+    i = 0
+    j=0
+    #dev_no = []
+    #name = []
+    #Id = []
+    global sensor
+    global sensor_count 
+    print("get sensor details called")
+    if len(sensor) != 0:
+        sensor.clear()
+        sensor_count = 0
+    line_count = 0
+    data = subprocess.Popen('../../../scripts/setup_cameras.sh',stdout=subprocess.PIPE,bufsize=1,universal_newlines=True,shell=True)
+    #line = data.stdout.readline()
+    line = data.stdout.readline()
+    #print(line)
+    #out = data.communicate()[0]
+    if not line:
+    #if len(data) == 0:
+        print("not found")
+        raise HTTPException(
+            status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
+    else: 
+        for l in data.stdout:
+            output = l.rstrip()
+            print(output)
+            line_count = line_count + 1
+            print(line_count)
+            if(line_count == 1):
+                break
+        parts = output.split(' ')
+        #print(output)
+        #print(parts)
+        dev_num = (parts[6])
+        #print(dev_no)
+        dev_no = dev_num.replace('/dev/','')
+        usb_name = subprocess.Popen('cat /sys/class/video4linux/{}/name'.format(dev_no),stdout=subprocess.PIPE,bufsize=1,universal_newlines=True,shell=True)
+        usb_name = usb_name.communicate()[0]
+        #print(usb_name)
+        if len(usb_name) == 0:
+            name = "unknown device"
+        else:
+            name = usb_name.strip()               
+                
 
-
+        device_type="V4L2"
+        sensor_type="Webcam"
+        description="device available for capture"
+        status="available"
+        sensor.append(Sensor(name = name,id = "null", type = sensor_type, device = [DeviceItem(id = dev_num,type = device_type, description = description, status = status)]))
+        return sensor
+        
 #GET call endpoint to get sensor details using id
 @app.get('/sensor/{id}',status_code=response_code.OK.value) # get sensor details by id
 def get_sensor_byid(id):
