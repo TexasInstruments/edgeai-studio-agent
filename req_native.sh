@@ -1,6 +1,6 @@
 #! /bin/sh
 
-pip3 install -r requirements.txt
+pip3 install -r req_native.txt
 cd server
 npm install express --save
 npm install cors --save
