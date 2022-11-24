@@ -1,0 +1,21 @@
+--- gst_wrapper.py
++++ gst_wrapper_new.py
+@@ -389,6 +389,9 @@
+     else:
+         sink = 'others'
+ 
++    if (sink == 'udpsink host=127.0.0.1 port=8081'):
++        sink_cmd = 'udpsink host=127.0.0.1 port=8081'
++
+     if (sink == 'display'):
+         sink_cmd = ' kmssink sync=false driver-name=tidss'
+         if (output.connector):
+@@ -406,7 +409,7 @@
+         sink_cmd = ' ' + output.sink
+ 
+     if (output.mosaic):
+-        sink_cmd = '! video/x-raw,format=NV12, width=%d, height=%d ' % (output.width,output.height) + '!' + sink_cmd
++        sink_cmd = '! clockoverlay halignment=center valignment=top ! video/x-raw,format=NV12, width=%d, height=%d, ' % (output.width,output.height) + 'framerate=10/1 !' + ' v4l2h264enc gop-size=30 ! h264parse ! matroskamux ! '+ sink_cmd
+ 
+         # To be prepended to the sink_cmd after mosaic element properties are added by subflows
+         bg_cmd = ''
