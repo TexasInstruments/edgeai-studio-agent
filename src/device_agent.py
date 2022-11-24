@@ -777,9 +777,7 @@ def get_project_id(id):
     count = 0
     global cwd
     global project_dir
-    #for path in glob.iglob('{}/../../../../projects/**'.format(cwd),recursive=True):
     if os.path.isdir('{}{}/{}'.format(cwd,project_dir,id)): # filter dirs
-            #print(path)
             
         with open('{}{}/{}/project.config'.format(cwd,project_dir,id),'r+') as config:
             project = json.load(config)
@@ -821,15 +819,12 @@ def delete_project(id):
  
 if __name__ == "__main__":
 
-    #if os.isdir('')
-    #global project_dir
     process_name = 'node'
     for proc in psutil.process_iter():                                                                           
         if process_name in proc.name():                                                                                                                
             pid = proc.pid  
             print(pid)                                                                                                                        
             os.system('kill -9 {}'.format(pid)) 
-    #count = 0
     if not os.path.isdir('{}{}'.format(cwd,project_dir)):
         os.system('mkdir {}{}'.format(cwd,project_dir)) 
     
@@ -846,15 +841,10 @@ if __name__ == "__main__":
             with open(path,'r+') as f:
                 y = json.dumps(yaml.load(f,Loader=yaml.FullLoader))
                 y=json.loads(y)
-                #keyCount  = int(len(y)/2)
                 keyCount  = int(len(y["outputs"]))
-                #print(keyCount)
-                print(y)
-                sink = {"output{}".format(keyCount):{"sink":"udpsink host=127.0.0.1 port=8081","width":1280,"height":720}}
-                #print(y["models"])
-                y["outputs"].update(sink)
-                #print(y)
                 
+                sink = {"output{}".format(keyCount):{"sink":"udpsink host=127.0.0.1 port=8081","width":1280,"height":720}}
+                y["outputs"].update(sink)
                 y["flows"]["flow0"]["outputs"] = ['output{}'.format(keyCount)]
                 input = {"input0":{"source":"/dev/video2","format":"jpeg","width":640,"height":360,"framerate":30}}
                 y["inputs"].update(input)
@@ -862,12 +852,8 @@ if __name__ == "__main__":
                 y["flows"]["flow0"]["mosaic"]["mosaic0"]["width"] = 640
                 y["flows"]["flow0"]["mosaic"]["mosaic0"]["height"] = 360
                 print(y)
-                #print(y)
-            #os.rename(path,'{}/../../../configs/copy.yaml'.format(cwd))
-            #with open('{}/../../../configs/copy.yaml'.format(cwd),'w') as fout:
             with open(path,'w') as fout:
                 yaml.safe_dump(y,fout,sort_keys=False)
-            #os.rename('{}/../../../configs/copy.yaml'.format(cwd),path)
             count = 0
     uvicorn.run("device_agent:app",
                 host="0.0.0.0", port=8000, reload=True, ws_ping_interval=math.inf, ws_ping_timeout=math.inf)
