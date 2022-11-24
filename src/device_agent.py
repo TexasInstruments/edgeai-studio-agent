@@ -26,6 +26,7 @@ import tarfile
 import sys
 import base64
 import aiofiles
+import click
 app = FastAPI()
 
 active_connections: List[WebSocket] = []
@@ -50,7 +51,10 @@ sensor=[]
 sensor_count=0
 cwd = os.getcwd()
 project_dir = '/../../../../projects'
-#global model_type
+keyCount = 0
+#model_type = None
+config_yaml_path = None
+dev_num = None
 
 """ class model:
     model_type = None
@@ -169,6 +173,10 @@ def start_sensor_session(id,x: Model):
     global sensor_session
     global cwd
     global project_dir
+    global keyCount
+    global dev_num
+    #global model_type
+    global config_yaml_path
     process_name="node"
     count = 0
     model_type=None
@@ -184,7 +192,8 @@ def start_sensor_session(id,x: Model):
          raise HTTPException(status_code=response_code.BAD_REQUEST.value, detail=response_detail.INVALID_ID.value)
     if(x.inference == False):
         if rawvideo_process is None or not rawvideo_process.is_alive():
-            rawvideo_process = RawvideoProcess()
+            print(dev_num)
+            rawvideo_process = RawvideoProcess(dev_num)
             rawvideo_process.start()
             process_name="python_gst.py"
             for proc in psutil.process_iter():
@@ -239,7 +248,15 @@ def start_sensor_session(id,x: Model):
                 keyCount  = int(len(y["models"]))
                 print(keyCount)
                 if model_type == "object_detection":
-                    model = {"model{}".format(keyCount):{"model_path":"{}".format(path),"viz_threshold":0.6}}
+                    with open('{}/param.yaml'.format(path),'r') as fp:
+                        print("open param file")
+                        z = json.dumps(yaml.load(fp,Loader=yaml.FullLoader))
+                        z = json.loads(z)
+                        threshold = z["postprocess"]["detection_threshold"]
+                        print(threshold)
+                        print(type(threshold))
+                    model = {"model{}".format(keyCount):{"model_path":"{}".format(path),"viz_threshold":threshold}}
+                    #model = {"model{}".format(keyCount):{"model_path":"{}".format(path),"viz_threshold":0.6}}
                 if model_type == "image_classification":
                     model = {"model{}".format(keyCount):{"model_path":"{}".format(path),"topN":1}}
                 #print(y["models"])
@@ -247,6 +264,7 @@ def start_sensor_session(id,x: Model):
                 #print(y)
                 
                 y["flows"]["flow0"]["models"] = ['model{}'.format(keyCount)]
+                y["inputs"]["input0"]["source"] = dev_num
                 #print(y)
             os.rename(config_yaml_path,'{}/../../../configs/copy.yaml'.format(cwd))
             with open('{}/../../../configs/copy.yaml'.format(cwd),'w') as fout:
@@ -302,6 +320,7 @@ def initiate_sensor_session(x: Sensor):
     j=0
     process_name="node"
     pid=None
+    ncount=0
     #while j < sensor_count:
     if x.device[0].id!=(sensor[0].device[0].id):
         #count = count + 1
@@ -311,12 +330,14 @@ def initiate_sensor_session(x: Sensor):
         raise HTTPException(
                 status_code=response_code.METHOD_NOT_ALLOWED.value, detail=response_detail.INVALID_INPUT.value)
     #count = 0
-    for proc in psutil.process_iter():
-        if process_name in proc.name():
-            pid = proc.pid
-            print(pid)
-            count = 1
-            break
+    if ncount != 0:
+        for proc in psutil.process_iter():
+            if process_name in proc.name():
+                pid = proc.pid
+                print(pid)
+                count = 1
+                ncount = 1
+                break
     print('hi')
     if count != 1:
         print("before starting server")
@@ -330,6 +351,7 @@ def initiate_sensor_session(x: Sensor):
         for proc in psutil.process_iter():
             if process_name in proc.name():
                 pid = proc.pid
+                print("newly created node",pid)
         ss_id = str(uuid.uuid4())
         session = Model(session = { "id":ss_id, "http_status":"started", "http_pid":p.pid + 1, "udp_status":"started", "udp_pid":p.pid + 1, "data_pipeline_status":"down","data_pipeline_pid":0},sensor = { "name":x.name, "id":x.id, "type":x.type, "device": [{"id":x.device[0].id, "type":x.device[0].type, "description":x.device[0].type, "status":x.device[0].status}]})
         sensor_session = session.dict()
@@ -391,6 +413,9 @@ def delete_data_pipeline(id):
     global inference_process
     global sensor_session
     global ss_id
+    global keyCount
+    #global model_type
+    global config_yaml_path
     #global sensor
     #global sensor_count
     pid=None
@@ -427,6 +452,16 @@ def delete_data_pipeline(id):
                     #print("sensor after clearing is",sensor)
                     #os.system("sed -i '$d' {}/../../classnames.py".format(cwd)) 
                     os.system("sed -i '/modelmaker/d' {}/../../classnames.py".format(cwd))
+                    #if model_type == "image_classification":
+                    with open(config_yaml_path, 'r') as fin:
+                        y = json.dumps(yaml.load(fin,Loader=yaml.FullLoader))
+                        y=json.loads(y) 
+                        x = y["models"]
+                        x.popitem()
+                        y["models"] = x
+                    with open(config_yaml_path,'w') as fout:
+                        yaml.safe_dump(y,fout,sort_keys=False)
+                        
                     return(response_detail.ACCEPTED.value) 
         else:
 
@@ -498,6 +533,7 @@ def get_sensor():
     #Id = []
     global sensor
     global sensor_count 
+    global dev_num
     print("get sensor details called")
     if len(sensor) != 0:
         sensor.clear()
@@ -787,30 +823,45 @@ if __name__ == "__main__":
 
     #if os.isdir('')
     #global project_dir
-    count = 0
+    process_name = 'node'
+    for proc in psutil.process_iter():                                                                           
+        if process_name in proc.name():                                                                                                                
+            pid = proc.pid  
+            print(pid)                                                                                                                        
+            os.system('kill -9 {}'.format(pid)) 
+    #count = 0
     if not os.path.isdir('{}{}'.format(cwd,project_dir)):
         os.system('mkdir {}{}'.format(cwd,project_dir)) 
     
     config_yaml_path = ['{}/../../../configs/image_classification.yaml'.format(cwd),'{}/../../../configs/object_detection.yaml'.format(cwd)]
     for path in config_yaml_path:
+        count = 0
         with open(path, 'r') as f:
             for index, line in enumerate(f):
                 if 'udpsink' in line:
+                    
                     count = count + 1
         if count == 0:
+            
             with open(path,'r+') as f:
                 y = json.dumps(yaml.load(f,Loader=yaml.FullLoader))
                 y=json.loads(y)
                 #keyCount  = int(len(y)/2)
                 keyCount  = int(len(y["outputs"]))
                 #print(keyCount)
-
-                sink = {"output{}".format(keyCount):{"sink":"udpsink host=127.0.0.1 port=8081","width":1920,"height":1080}}
+                print(y)
+                sink = {"output{}".format(keyCount):{"sink":"udpsink host=127.0.0.1 port=8081","width":1280,"height":720}}
                 #print(y["models"])
                 y["outputs"].update(sink)
                 #print(y)
                 
                 y["flows"]["flow0"]["outputs"] = ['output{}'.format(keyCount)]
+                input = {"input0":{"source":"/dev/video2","format":"jpeg","width":640,"height":360,"framerate":30}}
+                y["inputs"].update(input)
+                y["flows"]["flow0"]["input"] = "input0"
+                y["flows"]["flow0"]["mosaic"]["mosaic0"]["width"] = 640
+                y["flows"]["flow0"]["mosaic"]["mosaic0"]["height"] = 360
+                print(y)
                 #print(y)
             #os.rename(path,'{}/../../../configs/copy.yaml'.format(cwd))
             #with open('{}/../../../configs/copy.yaml'.format(cwd),'w') as fout:

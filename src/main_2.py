@@ -9,10 +9,10 @@ import re
 import json
 import sys
 
-def run_loop(model_config,name=''):
+def run_loop(config,name=''):
     if name=='INFERENCE':
         line_count = 0
-        print(model_config)
+        model_config = config
         ws1 = create_connection("ws://localhost:8000/ws/1/log")
         ws2= create_connection("ws://localhost:8000/ws/1/inference")
         time.sleep(0.5)
@@ -67,13 +67,15 @@ def run_loop(model_config,name=''):
             ws1.send(line)
             time.sleep(0.1)
     elif name=='RAWVIDEO':
-        cap = cv2.VideoCapture(2)
+        #print(dev_num)
+        #cap = cv2.VideoCapture(2)
         width = 640
         height = 360
+        dev_num = config
         #width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         #height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        cap.release()
-        cmd='./python_gst.py {} {}'.format(width,height)
+        #cap.release()
+        cmd='./python_gst.py {} {} {}'.format(dev_num,width,height)
 
         os.system(cmd)
     else:
@@ -90,9 +92,10 @@ class InferenceProcess(Process):
         print("Inference thread completed...!!!")
 
 class RawvideoProcess(Process):
-    def __init__(self):
+    def __init__(self,dev_num):
+        self.dev_num = dev_num
         super(RawvideoProcess, self).__init__()
     def run(self):
         print("raw video stream thread started....")
-        run_loop(None,'RAWVIDEO')
+        run_loop(self.dev_num,'RAWVIDEO')
         print("raw video stream thread completed...!!!")
