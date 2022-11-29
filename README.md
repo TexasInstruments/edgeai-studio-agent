@@ -22,6 +22,7 @@ ls /dev/tty | grep USB
  -For additional reference check link :- (https://www.ti.com/lit/ug/spruj21c/spruj21c.pdf?ts=1669039866167&ref_url=https%253A%252F%252Fwww.google.com%252Fur ) **refer Section :- 2.3.1 Uart-Over-USB [J4] With LED for Status** 
 
 5. Now type command **ifconfig** to get the ip address, the highlighted one as shown in the figure below: 
+
 ![ifconfig output](/images/get_ip-address.png)
 
 6. Now you can ssh into the target using this ip address using CMD(via HOST PC):
@@ -32,7 +33,7 @@ ssh root@ip-address
 
 1. Download the evm agent repo tar file from gitlab into your pc from this link: (https://gitlab.ignitarium.in/ti-edgeai_studio/ti-edgeai-studio-evm-agent)
 
-(Note: If a clone of above repo can be done on target EVM this will be the recommended option since change we make can easily be updated. If cloning skip steps 2 and 3 , always clone repo into /opt/edge_ai_apps/apps_python/ on target) 
+(Note: If a clone of above repo can be done on target EVM this will be the recommended option since change we make can  andeasily be updated. If cloning skip steps 2 and 3 , always clone repo into /opt/edge_ai_apps/apps_python/ on target and if cloning replace ti-edgeai-studio-evm-agent-main with ti-edgeai-studio-evm-agent in the upcoming commands ) 
 
 2. Transfer above .tar into target to this location  /opt/edge_ai_apps/apps_python/ 
 
