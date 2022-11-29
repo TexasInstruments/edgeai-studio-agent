@@ -14,21 +14,16 @@ sudo minicom -D /dev/ttyUSBX -c
 ls /dev/tty | grep USB 
 ```
 ![usb serial ports list output](/images/usb_serial_ports.png)
--It will be mostly ttyUSB2 but to confirm try opening multiple minicom sessions with different serial ports (ttyUSB0, ttyUSB1, ttyUSB2, ttyUSB3) and check if the boot logs are visible on power cycle or POR. 
--When getting boot logs ; you will get login option as shown in the diagram, give root as login id 
+- It will be mostly ttyUSB2 but to confirm try opening multiple minicom sessions with different serial ports (ttyUSB0, ttyUSB1, ttyUSB2, ttyUSB3) and check if the boot logs are visible on power cycle or POR. 
+
+- When getting boot logs ; you will get login option as shown in the diagram, give root as login id 
 ![tda4vm login](/images/tda4vm_login.png)
 
- -For additional reference check link :- [link](https://www.ti.com/lit/ug/spruj21c/spruj21c.pdf?ts=1669039866167&ref_url=https%253A%252F%252Fwww.google.com%252Fur files) refer Section :- 2.3.1 Uart-Over-USB [J4] With LED for Status 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+ -For additional reference check link :- [ ](https://www.ti.com/lit/ug/spruj21c/spruj21c.pdf?ts=1669039866167&ref_url=https%253A%252F%252Fwww.google.com%252Fur files) refer Section :- 2.3.1 Uart-Over-USB [J4] With LED for Status 
 
-```
-cd existing_repo
-git remote add origin https://gitlab.ignitarium.in/ti-edgeai_studio/ti-edgeai-studio-evm-agent.git
-git branch -M main
-git push -uf origin main
-```
-
+- Now type command ifconfig to get the ip address, the highlighted one as shown in the figure below: 
+![ifconfig output](/images/get_ip-address.png)
+- Now you can ssh into the target using this ip address ie, ssh root@ip-address(via HOST PC)
 ## Integrate with your tools
 
 - [ ] [Set up project integrations](https://gitlab.ignitarium.in/ti-edgeai_studio/ti-edgeai-studio-evm-agent/-/settings/integrations)
