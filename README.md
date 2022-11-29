@@ -2,7 +2,7 @@
 
 
 
-## FETCHING IP ADDRESS OF DEVICE VIA UART TERMINAL FROM HOST SIDE
+## A) FETCHING IP ADDRESS OF DEVICE VIA UART TERMINAL FROM HOST SIDE
 
 - First connect the UART cable to your PC; Open your terminal 
 - Start minicom session on PC using: 
@@ -19,10 +19,11 @@ ls /dev/tty | grep USB
 - When getting boot logs ; you will get login option as shown in the diagram, give root as login id 
 ![tda4vm login](/images/tda4vm_login.png)
 
- -For additional reference check link :- [ ](https://www.ti.com/lit/ug/spruj21c/spruj21c.pdf?ts=1669039866167&ref_url=https%253A%252F%252Fwww.google.com%252Fur files) refer Section :- 2.3.1 Uart-Over-USB [J4] With LED for Status 
+ -For additional reference check link :- (https://www.ti.com/lit/ug/spruj21c/spruj21c.pdf?ts=1669039866167&ref_url=https%253A%252F%252Fwww.google.com%252Fur ) **refer Section :- 2.3.1 Uart-Over-USB [J4] With LED for Status** 
 
-- Now type command ifconfig to get the ip address, the highlighted one as shown in the figure below: 
+- Now type command **ifconfig** to get the ip address, the highlighted one as shown in the figure below: 
 ![ifconfig output](/images/get_ip-address.png)
+
 - Now you can ssh into the target using this ip address ie, ssh root@ip-address(via HOST PC)
 ## Integrate with your tools
 
