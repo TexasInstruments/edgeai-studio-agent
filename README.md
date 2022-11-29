@@ -4,27 +4,27 @@
 
 ## A) FETCHING IP ADDRESS OF DEVICE VIA UART TERMINAL FROM HOST SIDE
 
-- First connect the UART cable to your PC; Open your terminal 
-- Start minicom session on PC using: 
+1. First connect the UART cable to your PC; Open your terminal 
+2. Start minicom session on PC using: 
 ```
 sudo minicom -D /dev/ttyUSBX -c
 ```
-- In above command COM port can vary (/dev/ttyUSB),to confirm that check which all usb serial ports available: 
+3. In above command COM port can vary (/dev/ttyUSB),to confirm that check which all usb serial ports available: 
 ```
 ls /dev/tty | grep USB 
 ```
 ![usb serial ports list output](/images/usb_serial_ports.png)
 - It will be mostly ttyUSB2 but to confirm try opening multiple minicom sessions with different serial ports (ttyUSB0, ttyUSB1, ttyUSB2, ttyUSB3) and check if the boot logs are visible on power cycle or POR. 
 
-- When getting boot logs ; you will get login option as shown in the diagram, give root as login id 
+4. When getting boot logs ; you will get login option as shown in the diagram, give root as login id 
 ![tda4vm login](/images/tda4vm_login.png)
 
  -For additional reference check link :- (https://www.ti.com/lit/ug/spruj21c/spruj21c.pdf?ts=1669039866167&ref_url=https%253A%252F%252Fwww.google.com%252Fur ) **refer Section :- 2.3.1 Uart-Over-USB [J4] With LED for Status** 
 
-- Now type command **ifconfig** to get the ip address, the highlighted one as shown in the figure below: 
+5. Now type command **ifconfig** to get the ip address, the highlighted one as shown in the figure below: 
 ![ifconfig output](/images/get_ip-address.png)
 
-- Now you can ssh into the target using this ip address using CMD(via HOST PC):
+6. Now you can ssh into the target using this ip address using CMD(via HOST PC):
 ```
 ssh root@ip-address
 ```
@@ -46,19 +46,19 @@ patch /opt/edge_ai_apps/apps_python/gst_wrapper.py /opt/edge_ai_apps/apps_python
 ```
 patch /opt/edge_ai_apps/apps_python/post_process.py /opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent-main/patch_folder/post_process_patch.txt 
 ```
-5. Navigate to the folder using CMD:
+6. Navigate to the folder using CMD:
 ```
 cd /opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent-main/ 
 ```
-6.  Run the following script to install dependencies.
+7.  Run the following script to install dependencies.
 ```
 ./req_native.sh script
 ```
-7. Go to src folder using CMD: 
+8. Go to src folder using CMD: 
 ```
 cd /opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent-main/src 
 ```
-8. Execute device agent script using CMD: 
+9. Execute device agent script using CMD: 
 ```
 python3 device_agent.py  
 ```
