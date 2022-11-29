@@ -9,8 +9,7 @@
 ```
 sudo minicom -D /dev/ttyUSBX -c
 ```
-- In above command COM port can vary (/dev/ttyUSB), To confirm that : 
-Check which all usb serial ports available: 
+- In above command COM port can vary (/dev/ttyUSB),to confirm that check which all usb serial ports available: 
 ```
 ls /dev/tty | grep USB 
 ```
