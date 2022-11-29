@@ -13,7 +13,7 @@ sudo minicom -D /dev/ttyUSBX -c
 ```
 ls /dev/tty | grep USB 
 ```
-![usb serial ports list output](https://gitlab.ignitarium.in/ti-edgeai_studio/ti-edgeai-studio-evm-agent/-/blob/develop/images/usb_serial_ports.png)
+![usb serial ports list output](https://gitlab.ignitarium.in/ti-edgeai_studio/ti-edgeai-studio-evm-agent/-/blob/develop/images/usb_serial_ports.png?raw=true)
 ## Add your files
 
 - [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
