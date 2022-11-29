@@ -27,7 +27,7 @@ def run_loop(config,name=''):
                 pid = proc.pid
         for line in process.stdout:
             line = line.rstrip()
-            #totaltime = r"total time.*?\s+?(?P<inference_time>\d{1,5}\.\d{1,})\s+?m?s.*?from\s+(?P<sampples>\d+?)\s+?samples"
+            #inference = r"total time.*?\s+?(?P<inference_time>\d{1,5}\.\d{1,})\s+?m?s.*?from\s+(?P<sampples>\d+?)\s+?samples"
             inference = r"inference.*?\s+?(?P<inference_time>\d{1,5}\.\d{1,})\s+?m?s.*?from\s+(?P<sampples>\d+?)\s+?samples"
             m = re.search(inference, line)
             if m is not None:
@@ -35,10 +35,10 @@ def run_loop(config,name=''):
                             stdout=subprocess.PIPE,
                             bufsize=1,
                             universal_newlines=True,shell=True)
-                for line in process2.stdout:
+                for line2 in process2.stdout:
                     line_count = line_count + 1
                     if(line_count == 2): 
-                        avg_mem = line.rstrip()
+                        avg_mem = line2.rstrip()
                         line_count = 0
                         break
                 
