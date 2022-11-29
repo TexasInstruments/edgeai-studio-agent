@@ -2,11 +2,18 @@
 
 
 
-## Getting started
+## FETCHING IP ADDRESS OF DEVICE VIA UART TERMINAL FROM HOST SIDE
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
-
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+- First connect the UART cable to your PC; Open your terminal 
+- Start minicom session on PC using: 
+```
+sudo minicom -D /dev/ttyUSBX -c
+```
+- In above command COM port can vary (/dev/ttyUSB), To confirm that : 
+Check which all usb serial ports available: 
+```
+ls /dev/tty | grep USB 
+```
 
 ## Add your files
 
