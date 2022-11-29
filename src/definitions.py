@@ -31,6 +31,12 @@ class server_details(Enum):
     TCP_STATUS = "Down"
     TCP_PID = 0
 
+class dir_path(Enum):
+    PROJECT_DIR = '/../../../../projects'
+    CONFIG_DIR = '/../../../configs'
+    SCRIPTS_DIR = '/../../../scripts'
+    INFER_DIR = '/../../'
+
     
 
   
