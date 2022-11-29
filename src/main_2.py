@@ -1,5 +1,6 @@
 from multiprocessing import Process
 from websocket import create_connection
+from definitions import dir_path
 import time
 import os
 import psutil
@@ -9,6 +10,8 @@ import re
 import json
 import sys
 
+cwd = os.getcwd()
+
 def run_loop(config,name=''):
     if name=='INFERENCE':
         line_count = 0
@@ -16,7 +19,7 @@ def run_loop(config,name=''):
         ws1 = create_connection("ws://localhost:8000/ws/1/log")
         ws2= create_connection("ws://localhost:8000/ws/1/inference")
         time.sleep(0.5)
-        process = subprocess.Popen('../../app_edgeai.py ../../../configs/{}.yaml'.format(model_config),
+        process = subprocess.Popen('{}{}app_edgeai.py {}{}/{}.yaml'.format(cwd,dir_path.INFER_DIR.value,cwd,dir_path.CONFIG_DIR.value,model_config),
                             stdout=subprocess.PIPE,
                             bufsize=1,
                             universal_newlines=True,shell=True)
