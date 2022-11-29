@@ -13,7 +13,7 @@ sudo minicom -D /dev/ttyUSBX -c
 ```
 ls /dev/tty | grep USB 
 ```
-
+![usb serial ports list output](images/usb_serial.ports.png)
 ## Add your files
 
 - [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
