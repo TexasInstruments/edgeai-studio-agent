@@ -25,10 +25,8 @@ def run_loop(config,name=''):
         for proc in psutil.process_iter():
             if process_name in proc.name():
                 pid = proc.pid
-                #print(pid)
         for line in process.stdout:
             line = line.rstrip()
-            print(line)
             #totaltime = r"total time.*?\s+?(?P<inference_time>\d{1,5}\.\d{1,})\s+?m?s.*?from\s+(?P<sampples>\d+?)\s+?samples"
             inference = r"inference.*?\s+?(?P<inference_time>\d{1,5}\.\d{1,})\s+?m?s.*?from\s+(?P<sampples>\d+?)\s+?samples"
             m = re.search(inference, line)
@@ -38,17 +36,12 @@ def run_loop(config,name=''):
                             bufsize=1,
                             universal_newlines=True,shell=True)
                 for line in process2.stdout:
-                    #output = line.rstrip()
-                    #print(output)
                     line_count = line_count + 1
                     if(line_count == 2): 
                         avg_mem = line.rstrip()
                         line_count = 0
-                        #sys.stdout.write('\x1b[1A')
-                        #sys.stdout.write('\x1b[2K')
-
                         break
-                #infer_param = {"inference_time":m.group("inference_time"),"average_memory":avg_mem}
+                
                 infer_param = {
                          "inference_time": {
                             "unit": "s",
@@ -62,21 +55,14 @@ def run_loop(config,name=''):
                         }
                 }
                 ws2.send(json.dumps(infer_param))
-                #time.sleep(0.1)
             time.sleep(0.1)
             ws1.send(line)
             time.sleep(0.1)
     elif name=='RAWVIDEO':
-        #print(dev_num)
-        #cap = cv2.VideoCapture(2)
         width = 640
         height = 360
         dev_num = config
-        #width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        #height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        #cap.release()
         cmd='./python_gst.py {} {} {}'.format(dev_num,width,height)
-
         os.system(cmd)
     else:
         print("invalid")

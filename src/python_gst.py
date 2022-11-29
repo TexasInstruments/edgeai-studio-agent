@@ -29,11 +29,7 @@ def on_message(bus: Gst.Bus, message: Gst.Message, loop: GLib.MainLoop):
 
 if __name__ == '__main__':
     Gst.init()
-    print(sys.argv[1])
-    print(sys.argv[2])
-    print(sys.argv[3])
-    print("before play")
-    #p = Gst.parse_launch(" v4l2src device=/dev/video2 ! videoconvert ! clockoverlay ! video/x-raw, width={}, height={}, framerate=10/1 ! x264enc tune=zerolatency speed-preset=superfast bitrate=128 ! video/x-h264,profile=high ! mp4mux fragment-duration=1 ! udpsink host=127.0.0.1 port=8081".format(sys.argv[1],sys.argv[2]))
+    print("before playing")
     p = Gst.parse_launch(" v4l2src device={} ! videoconvert ! video/x-raw, width={}, height={}, framerate=30/1, format=NV12 ! v4l2h264enc gop-size=30 ! h264parse ! matroskamux ! udpsink host=127.0.0.1  port=8081".format(sys.argv[1],sys.argv[2],sys.argv[3]))
     bus = p.get_bus()
     # allow bus to emit messages to main thread
@@ -45,6 +41,6 @@ if __name__ == '__main__':
     try:
         loop.run()
     except KeyboardInterrupt:
-        pass
+        loop.quit()
 
     p.set_state(Gst.State.NULL)
