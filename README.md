@@ -37,9 +37,9 @@ ssh root@ip-address
 
 2. Transfer above .tar into target to this location  /opt/edge_ai_apps/apps_python/ 
 
-3. Extract the file in device using command :  
+3. Extract the file in device using command(Note: Extract to /opt/edge_ai_apps/apps_python/ location) :  
 ```
-tar –xvf /opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent-main.tar.gz  (Note: Extract to /opt/edge_ai_apps/apps_python/ location) 
+tar –xvf /opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent-main.tar.gz   
 ```
 4. Apply patch onto gst_wrapper.py for enabling the inference pipeline using CMD:
 ```
