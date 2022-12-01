@@ -33,7 +33,7 @@ ssh root@ip-address
 
 1. Download the evm agent repo tar file from gitlab into your pc from this link: (https://gitlab.ignitarium.in/ti-edgeai_studio/ti-edgeai-studio-evm-agent)
 
-(Note: If a clone of above repo can be done on target EVM this will be the recommended option since change we make can  andeasily be updated. If cloning skip steps 2 and 3 , always clone repo into /opt/edge_ai_apps/apps_python/ on target and if cloning replace ti-edgeai-studio-evm-agent-main with ti-edgeai-studio-evm-agent in the upcoming commands ) 
+(Note: If a clone of above repo can be done on target EVM this will be the recommended option since change we make can  andeasily be updated. If cloning skip steps 2 and 3 , always clone repo into /opt/edge_ai_apps/apps_python/ on target and i**f cloning replace ti-edgeai-studio-evm-agent-main with ti-edgeai-studio-evm-agent in the upcoming commands** ) 
 
 2. Transfer above .tar into target to this location  /opt/edge_ai_apps/apps_python/ 
 
@@ -55,7 +55,7 @@ cd /opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent-main/
 ```
 7.  Run the following script to install dependencies.
 ```
-./req_native.sh script
+./req_native.sh 
 ```
 8. Go to src folder using CMD: 
 ```
