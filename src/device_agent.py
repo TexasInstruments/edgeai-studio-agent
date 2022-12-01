@@ -138,6 +138,8 @@ async def websocket_endpoint(websocket: WebSocket,client_id: int):
     try:
       while True:
          data = await websocket.receive_text()
+         #print(data)
+         #line = re.sub(r'[^\x00-\x7F]+',' ', data)
          await manager1.broadcast_log(data)
     except Exception as e:
         manager1.disconnect(websocket)
@@ -175,7 +177,7 @@ def start_sensor_session(id,x: Model):
             break
     if(count == 0):
         raise HTTPException(
-            status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
+            status_code=response_code.NOT_FOUND.value, detail=response_detail.SESSION_NOT_FOUND.value)
     if(id != ss_id):
          raise HTTPException(status_code=response_code.BAD_REQUEST.value, detail=response_detail.INVALID_ID.value)
     if(x.inference == False):
@@ -224,7 +226,7 @@ def start_sensor_session(id,x: Model):
             
             if(pcount == 0):
                 raise HTTPException(
-                    status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
+                    status_code=response_code.NOT_FOUND.value, detail=response_detail.PROJECT_NOT_FOUND.value)
             else:
                 if x.project.task_type == "classification":
                     model_type="image_classification"
@@ -344,7 +346,7 @@ def get_sensor_session():
     global sensor_session
     if(sensor_session==None):
          raise HTTPException(
-            status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
+            status_code=response_code.NOT_FOUND.value, detail=response_detail.SESSION_NOT_FOUND.value)
     else:
         return sensor_session
 
@@ -355,7 +357,7 @@ def get_sensor_session_id(id):
     global sensor_session
     if(sensor_session==None):
          raise HTTPException(
-            status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
+            status_code=response_code.NOT_FOUND.value, detail=response_detail.SESSION_NOT_FOUND.value)
     print(sensor_session["session"]["id"])
     if(id != sensor_session["session"]["id"]):
         raise HTTPException(
@@ -389,7 +391,7 @@ def delete_data_pipeline(id):
             return(response_detail.ACCEPTED.value)
         else:
             raise HTTPException(
-                status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
+                status_code=response_code.NOT_FOUND.value, detail=response_detail.SESSION_NOT_FOUND.value)
     else:
         if inference_process is not None and inference_process.is_alive():
             process_name="app_edgeai.py"
@@ -417,7 +419,7 @@ def delete_data_pipeline(id):
 
             os.system("sed -i '/modelmaker/d' {}{}classnames.py".format(cwd,dir_path.INFER_DIR.value)) 
             raise HTTPException(
-                status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
+                status_code=response_code.NOT_FOUND.value, detail=response_detail.SESSION_NOT_FOUND.value)
 
 #GET call endpoint to get sensor details
 @app.get('/sensor',status_code=response_code.OK.value) # get sensor details
@@ -435,7 +437,7 @@ def get_sensor():
     if not line:
         print("sensor not found")
         raise HTTPException(
-            status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
+            status_code=response_code.NOT_FOUND.value, detail=response_detail.SENSOR_NOT_FOUND.value)
     else: 
         for l in data.stdout:
             output = l.rstrip()
@@ -514,10 +516,12 @@ async def upload_model(id,file: UploadFile = File(...)):
                     json.dump(project,config)
                     config.truncate()
     except Exception as e:
-        print("Error in uploading model to EVM whose exception is",e)           
+        print("Error in uploading model to EVM whose exception is",e)
+        raise HTTPException(
+            status_code=response_code.METHOD_NOT_ALLOWED.value, detail=response_detail.INVALID_INPUT.value)           
     if(count == 0):
         raise HTTPException(
-            status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
+            status_code=response_code.NOT_FOUND.value, detail=response_detail.PROJECT_NOT_FOUND.value)
     else:
         return(response_detail.CREATED.value,project['id'])
 
@@ -537,7 +541,7 @@ def get_projects():
                 continue
     if(count == 0):
         raise HTTPException(
-            status_code=404, detail="No registered projects found")
+            status_code=response_code.NOT_FOUND.value, detail=response_detail.PROJECT_NOT_FOUND.value)
     else:
         return(project_list)
 
@@ -555,7 +559,7 @@ def get_project_id(id):
                     count = count + 1
     if(count == 0):
         raise HTTPException(
-            status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
+            status_code=response_code.NOT_FOUND.value, detail=response_detail.PROJECT_NOT_FOUND.value)
     else:
         return(project)
 
@@ -574,7 +578,7 @@ def delete_project(id):
     
     if(count == 0):
         raise HTTPException(
-            status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
+            status_code=response_code.NOT_FOUND.value, detail=response_detail.PROJECT_NOT_FOUND.value)
     else:
         return(response_detail.SUCCESS.value)
 

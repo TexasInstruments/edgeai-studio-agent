@@ -25,11 +25,16 @@ def run_loop(config,name=''):
                             universal_newlines=True,shell=True)
         time.sleep(0.5)
         process_name="app_edgeai.py"
+        file1 = open("log.txt", "w") 
         for proc in psutil.process_iter():
             if process_name in proc.name():
                 pid = proc.pid
         for line in process.stdout:
             line = line.rstrip()
+            file1.write(line)
+            file1.write('\n')
+            #line = re.sub(r'[^\x00-\x7F]+',' ', log)
+            #print(line)
             #inference = r"total time.*?\s+?(?P<inference_time>\d{1,5}\.\d{1,})\s+?m?s.*?from\s+(?P<sampples>\d+?)\s+?samples"
             inference = r"inference.*?\s+?(?P<inference_time>\d{1,5}\.\d{1,})\s+?m?s.*?from\s+(?P<sampples>\d+?)\s+?samples"
             m = re.search(inference, line)
@@ -61,6 +66,7 @@ def run_loop(config,name=''):
             time.sleep(0.1)
             ws1.send(line)
             time.sleep(0.1)
+        file1.close()
     elif name=='RAWVIDEO':
         width = 640
         height = 360
@@ -69,7 +75,7 @@ def run_loop(config,name=''):
         os.system(cmd)
     else:
         print("invalid")
-
+    
 class InferenceProcess(Process):
     def __init__(self,model_config):
         self.model_config = model_config
