@@ -55,7 +55,7 @@ cd /opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent-main/
 ```
 7.  Run the following script to install dependencies.
 ```
-./req_native.sh script
+./req_native.sh 
 ```
 8. Go to src folder using CMD: 
 ```
