@@ -1,8 +1,8 @@
---- post_process_old.py
-+++ post_process.py
+--- post_process.py
++++ post_process_new.py
 @@ -172,7 +172,7 @@
-         
- 	for b in bbox:
+ 
+         for b in bbox:
              if b[5] > self.model.viz_threshold:
 -                class_name = self.classnames[self.model.label_offset[int(b[4])]]
 +                class_name = self.classnames[self.model.label_offset + int(b[4])]

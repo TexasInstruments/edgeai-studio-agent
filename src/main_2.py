@@ -1,5 +1,6 @@
 from multiprocessing import Process
 from websocket import create_connection
+from definitions import dir_path
 import time
 import os
 import psutil
@@ -9,6 +10,8 @@ import re
 import json
 import sys
 
+cwd = os.getcwd()
+
 def run_loop(config,name=''):
     if name=='INFERENCE':
         line_count = 0
@@ -16,18 +19,23 @@ def run_loop(config,name=''):
         ws1 = create_connection("ws://localhost:8000/ws/1/log")
         ws2= create_connection("ws://localhost:8000/ws/1/inference")
         time.sleep(0.5)
-        process = subprocess.Popen('../../app_edgeai.py ../../../configs/{}.yaml'.format(model_config),
+        process = subprocess.Popen('{}{}app_edgeai.py {}{}/{}.yaml'.format(cwd,dir_path.INFER_DIR.value,cwd,dir_path.CONFIG_DIR.value,model_config),
                             stdout=subprocess.PIPE,
                             bufsize=1,
                             universal_newlines=True,shell=True)
         time.sleep(0.5)
         process_name="app_edgeai.py"
+        file1 = open("log.txt", "w") 
         for proc in psutil.process_iter():
             if process_name in proc.name():
                 pid = proc.pid
         for line in process.stdout:
             line = line.rstrip()
-            #totaltime = r"total time.*?\s+?(?P<inference_time>\d{1,5}\.\d{1,})\s+?m?s.*?from\s+(?P<sampples>\d+?)\s+?samples"
+            file1.write(line)
+            file1.write('\n')
+            #line = re.sub(r'[^\x00-\x7F]+',' ', log)
+            #print(line)
+            #inference = r"total time.*?\s+?(?P<inference_time>\d{1,5}\.\d{1,})\s+?m?s.*?from\s+(?P<sampples>\d+?)\s+?samples"
             inference = r"inference.*?\s+?(?P<inference_time>\d{1,5}\.\d{1,})\s+?m?s.*?from\s+(?P<sampples>\d+?)\s+?samples"
             m = re.search(inference, line)
             if m is not None:
@@ -35,10 +43,10 @@ def run_loop(config,name=''):
                             stdout=subprocess.PIPE,
                             bufsize=1,
                             universal_newlines=True,shell=True)
-                for line in process2.stdout:
+                for line2 in process2.stdout:
                     line_count = line_count + 1
                     if(line_count == 2): 
-                        avg_mem = line.rstrip()
+                        avg_mem = line2.rstrip()
                         line_count = 0
                         break
                 
@@ -58,6 +66,7 @@ def run_loop(config,name=''):
             time.sleep(0.1)
             ws1.send(line)
             time.sleep(0.1)
+        file1.close()
     elif name=='RAWVIDEO':
         width = 640
         height = 360
@@ -66,7 +75,7 @@ def run_loop(config,name=''):
         os.system(cmd)
     else:
         print("invalid")
-
+    
 class InferenceProcess(Process):
     def __init__(self,model_config):
         self.model_config = model_config

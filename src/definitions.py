@@ -14,7 +14,9 @@ class response_detail(Enum):
     CREATED = "Succesfully created"
     ACCEPTED = "Operation accepted"
     INVALID_ID = "Invalid ID supplied"
-    NOT_FOUND = "Not found"
+    SESSION_NOT_FOUND = "Session not found"
+    PROJECT_NOT_FOUND = "Project not found"
+    SENSOR_NOT_FOUND = "Sensor not found"
     INVALID_INPUT = "Invalid input"
     PROJECT_CONFLICT = "Project already exists"
     SESSION_CONFLICT = "Sensor session alreday running"
@@ -30,6 +32,12 @@ class server_details(Enum):
     TCP_CLIENT_PORT = 0
     TCP_STATUS = "Down"
     TCP_PID = 0
+
+class dir_path(Enum):
+    PROJECT_DIR = '/../../../../projects'
+    CONFIG_DIR = '/../../../configs'
+    SCRIPTS_DIR = '/../../../scripts'
+    INFER_DIR = '/../../'
 
     
 

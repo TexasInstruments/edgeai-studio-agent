@@ -19,14 +19,13 @@ from fastapi.responses import FileResponse
 import uuid
 import glob
 import hashlib
-from definitions import response_code,response_detail,server_details
+from definitions import response_code,response_detail,server_details,dir_path
 import yaml
 import math
 import tarfile
 import sys
 import base64
 import aiofiles
-import click
 
 app = FastAPI()
 active_connections: List[WebSocket] = []
@@ -50,7 +49,6 @@ ss_id=0
 sensor_session=None
 sensor=[]
 cwd = os.getcwd()
-project_dir = '/../../../../projects'
 keyCount = 0
 config_yaml_path = None
 dev_num = None
@@ -140,6 +138,8 @@ async def websocket_endpoint(websocket: WebSocket,client_id: int):
     try:
       while True:
          data = await websocket.receive_text()
+         #print(data)
+         #line = re.sub(r'[^\x00-\x7F]+',' ', data)
          await manager1.broadcast_log(data)
     except Exception as e:
         manager1.disconnect(websocket)
@@ -164,7 +164,6 @@ def start_sensor_session(id,x: Model):
     global inference_process
     global sensor_session
     global cwd
-    global project_dir
     global keyCount
     global dev_num
     global config_yaml_path
@@ -178,7 +177,7 @@ def start_sensor_session(id,x: Model):
             break
     if(count == 0):
         raise HTTPException(
-            status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
+            status_code=response_code.NOT_FOUND.value, detail=response_detail.SESSION_NOT_FOUND.value)
     if(id != ss_id):
          raise HTTPException(status_code=response_code.BAD_REQUEST.value, detail=response_detail.INVALID_ID.value)
     if(x.inference == False):
@@ -198,7 +197,7 @@ def start_sensor_session(id,x: Model):
                 sensor_session = x.dict()
                 return x
             except:
-                print("Error starting raw stream whose exception is")
+                print("Error starting raw stream ")
                 x.session.data_pipeline_pid=0
                 x.session.data_pipeline_status="down"
                 sensor_session = x.dict()
@@ -208,91 +207,92 @@ def start_sensor_session(id,x: Model):
                 status_code=response_code.CONFLICT.value, detail=response_detail.SESSION_CONFLICT.value)
             
     else:
-        print("inside inference")
-        pcount = 0
-        if os.path.isdir('{}{}/{}'.format(cwd,project_dir,x.project.id)):
-               
-            with open('{}{}/{}/project.config'.format(cwd,project_dir,x.project.id),'r+') as config:
-                project = json.load(config)
-
-                if(project['id'] == x.project.id):
-                    pcount = pcount + 1
-                    path = '{}{}/{}'.format(cwd,project_dir,project['id'])
-                    with open('{}/dataset.yaml'.format(path),'r') as f:
-                        categories = {w['id']:w['name'] for w in yaml.safe_load(f.read())["categories"]}
-                        print(categories)
-                    with open('{}/../../classnames.py'.format(cwd),'a') as fobj:
-                        fobj.writelines("\nmodelmaker="+str(categories))       
-         
-        if(pcount == 0):
-            raise HTTPException(
-                status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
-        else:
-            if x.project.task_type == "classification":
-                model_type="image_classification"
-                config_yaml_path = '{}/../../../configs/image_classification.yaml'.format(cwd)
-            if x.project.task_type == "detection":
-                model_type="object_detection"
-                config_yaml_path = '{}/../../../configs/object_detection.yaml'.format(cwd)
-            with open(config_yaml_path,'r+') as f:
-                y = json.dumps(yaml.load(f,Loader=yaml.FullLoader))
-                y=json.loads(y)
-                keyCount  = int(len(y["models"]))
+        if inference_process is None or not inference_process.is_alive():
+            print("inside inference")
+            pcount = 0
+            if os.path.isdir('{}{}/{}'.format(cwd,dir_path.PROJECT_DIR.value,x.project.id)):
                 
-                if model_type == "object_detection":
-                    with open('{}/param.yaml'.format(path),'r') as fp:
-                        z = json.dumps(yaml.load(fp,Loader=yaml.FullLoader))
-                        z = json.loads(z)
-                        threshold = z["postprocess"]["detection_threshold"]
+                with open('{}{}/{}/project.config'.format(cwd,dir_path.PROJECT_DIR.value,x.project.id),'r+') as config:
+                    project = json.load(config)
 
-                    model = {"model{}".format(keyCount):{"model_path":"{}".format(path),"viz_threshold":threshold}}
-                if model_type == "image_classification":
-                    model = {"model{}".format(keyCount):{"model_path":"{}".format(path),"topN":1}}
-                y["models"].update(model)
-                y["flows"]["flow0"]["models"] = ['model{}'.format(keyCount)]
-                y["inputs"]["input0"]["source"] = dev_num
-                
-            with open(config_yaml_path,'w') as fout:
-                yaml.safe_dump(y,fout,sort_keys=False)
+                    if(project['id'] == x.project.id):
+                        pcount = pcount + 1
+                        path = '{}{}/{}'.format(cwd,dir_path.PROJECT_DIR.value,project['id'])
+                        with open('{}/dataset.yaml'.format(path),'r') as f:
+                            categories = {w['id']:w['name'] for w in yaml.safe_load(f.read())["categories"]}
+                            print(categories)
+                        with open('{}{}classnames.py'.format(cwd,dir_path.INFER_DIR.value),'a') as fobj:
+                            fobj.writelines("\nmodelmaker="+str(categories))       
             
-            if inference_process is None or not inference_process.is_alive():
-                try:
-                    inference_process = InferenceProcess(model_type)
-                    inference_process.start()
-                    process_name="app_edgeai.py"
-                    for proc in psutil.process_iter():
-                        if process_name in proc.name():
-                            pid = proc.pid
-                            print(pid)
-                    x.session.data_pipeline_pid=pid
-                    x.session.data_pipeline_status="up"
-                    x.session.ws_status="up"
-                    x.session.ws_pid=os.getpid()
-                    sensor_session = x.dict()
-                    return x
-                except:    
-                    os.system("sed -i '/modelmaker/d' {}/../../classnames.py".format(cwd)) 
-                    dir_name = '{}/../../../../projects'.format(cwd)
-                    for dir in os.listdir(dir_name):
-                        path = os.path.join(dir_name, dir)
-                        if len(path) != 0:
-                            os.system('rm -r {}'.format(path))
-                    x.session.data_pipeline_pid=0
-                    x.session.data_pipeline_status="down"
-                    x.session.ws_status="down"
-                    x.session.ws_pid=0
-                    sensor_session = x.dict()
-                    with open(config_yaml_path, 'r') as fin:
-                        y = json.dumps(yaml.load(fin,Loader=yaml.FullLoader))
-                        y=json.loads(y) 
-                        x = y["models"]
-                        x.popitem()
-                        y["models"] = x
-                    with open(config_yaml_path,'w') as fout:
-                        yaml.safe_dump(y,fout,sort_keys=False)
-            else:
+            if(pcount == 0):
                 raise HTTPException(
-                    status_code=response_code.CONFLICT.value, detail=response_detail.SESSION_CONFLICT.value)
+                    status_code=response_code.NOT_FOUND.value, detail=response_detail.PROJECT_NOT_FOUND.value)
+            else:
+                if x.project.task_type == "classification":
+                    model_type="image_classification"
+                    config_yaml_path = '{}{}/image_classification.yaml'.format(cwd,dir_path.CONFIG_DIR.value)
+                if x.project.task_type == "detection":
+                    model_type="object_detection"
+                    config_yaml_path = '{}{}/object_detection.yaml'.format(cwd,dir_path.CONFIG_DIR.value)
+                with open(config_yaml_path,'r+') as f:
+                    y = json.dumps(yaml.load(f,Loader=yaml.FullLoader))
+                    y=json.loads(y)
+                    keyCount  = int(len(y["models"]))
+                    
+                    if model_type == "object_detection":
+                        with open('{}/param.yaml'.format(path),'r') as fp:
+                            z = json.dumps(yaml.load(fp,Loader=yaml.FullLoader))
+                            z = json.loads(z)
+                            threshold = z["postprocess"]["detection_threshold"]
+
+                        model = {"model{}".format(keyCount):{"model_path":"{}".format(path),"viz_threshold":threshold}}
+                    if model_type == "image_classification":
+                        model = {"model{}".format(keyCount):{"model_path":"{}".format(path),"topN":1}}
+                    y["models"].update(model)
+                    y["flows"]["flow0"]["models"] = ['model{}'.format(keyCount)]
+                    y["inputs"]["input0"]["source"] = dev_num
+                    
+                with open(config_yaml_path,'w') as fout:
+                    yaml.safe_dump(y,fout,sort_keys=False)
+                
+                
+                    try:
+                        inference_process = InferenceProcess(model_type)
+                        inference_process.start()
+                        process_name="app_edgeai.py"
+                        for proc in psutil.process_iter():
+                            if process_name in proc.name():
+                                pid = proc.pid
+                                print(pid)
+                        x.session.data_pipeline_pid=pid
+                        x.session.data_pipeline_status="up"
+                        x.session.ws_status="up"
+                        x.session.ws_pid=os.getpid()
+                        sensor_session = x.dict()
+                        return x
+                    except:    
+                        os.system("sed -i '/modelmaker/d' {}{}classnames.py".format(cwd,dir_path.INFER_DIR.value)) 
+                        dir_name = '{}{}'.format(cwd,dir_path.PROJECT_DIR.value)
+                        for dir in os.listdir(dir_name):
+                            path = os.path.join(dir_name, dir)
+                            if len(path) != 0:
+                                os.system('rm -r {}'.format(path))
+                        x.session.data_pipeline_pid=0
+                        x.session.data_pipeline_status="down"
+                        x.session.ws_status="down"
+                        x.session.ws_pid=0
+                        sensor_session = x.dict()
+                        with open(config_yaml_path, 'r') as fin:
+                            y = json.dumps(yaml.load(fin,Loader=yaml.FullLoader))
+                            y=json.loads(y) 
+                            x = y["models"]
+                            x.popitem()
+                            y["models"] = x
+                        with open(config_yaml_path,'w') as fout:
+                            yaml.safe_dump(y,fout,sort_keys=False)
+        else:
+            raise HTTPException(
+                status_code=response_code.CONFLICT.value, detail=response_detail.SESSION_CONFLICT.value)
             
             
             
@@ -346,7 +346,7 @@ def get_sensor_session():
     global sensor_session
     if(sensor_session==None):
          raise HTTPException(
-            status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
+            status_code=response_code.NOT_FOUND.value, detail=response_detail.SESSION_NOT_FOUND.value)
     else:
         return sensor_session
 
@@ -357,7 +357,7 @@ def get_sensor_session_id(id):
     global sensor_session
     if(sensor_session==None):
          raise HTTPException(
-            status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
+            status_code=response_code.NOT_FOUND.value, detail=response_detail.SESSION_NOT_FOUND.value)
     print(sensor_session["session"]["id"])
     if(id != sensor_session["session"]["id"]):
         raise HTTPException(
@@ -391,7 +391,7 @@ def delete_data_pipeline(id):
             return(response_detail.ACCEPTED.value)
         else:
             raise HTTPException(
-                status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
+                status_code=response_code.NOT_FOUND.value, detail=response_detail.SESSION_NOT_FOUND.value)
     else:
         if inference_process is not None and inference_process.is_alive():
             process_name="app_edgeai.py"
@@ -404,7 +404,7 @@ def delete_data_pipeline(id):
                     sensor_session["session"]["data_pipeline_pid"]=0
                     sensor_session["session"]["ws_status"]="down"
                     sensor_session["session"]["ws_pid"]=0
-                    os.system("sed -i '/modelmaker/d' {}/../../classnames.py".format(cwd))
+                    os.system("sed -i '/modelmaker/d' {}{}classnames.py".format(cwd,dir_path.INFER_DIR.value))
                     with open(config_yaml_path, 'r') as fin:
                         y = json.dumps(yaml.load(fin,Loader=yaml.FullLoader))
                         y=json.loads(y) 
@@ -417,9 +417,9 @@ def delete_data_pipeline(id):
                     return(response_detail.ACCEPTED.value) 
         else:
 
-            os.system("sed -i '/modelmaker/d' {}/../../classnames.py".format(cwd)) 
+            os.system("sed -i '/modelmaker/d' {}{}classnames.py".format(cwd,dir_path.INFER_DIR.value)) 
             raise HTTPException(
-                status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
+                status_code=response_code.NOT_FOUND.value, detail=response_detail.SESSION_NOT_FOUND.value)
 
 #GET call endpoint to get sensor details
 @app.get('/sensor',status_code=response_code.OK.value) # get sensor details
@@ -432,12 +432,12 @@ def get_sensor():
     if len(sensor) != 0:
         sensor.clear()
     line_count = 0
-    data = subprocess.Popen('../../../scripts/setup_cameras.sh',stdout=subprocess.PIPE,bufsize=1,universal_newlines=True,shell=True)
+    data = subprocess.Popen('{}{}/setup_cameras.sh'.format(cwd,dir_path.SCRIPTS_DIR.value),stdout=subprocess.PIPE,bufsize=1,universal_newlines=True,shell=True)
     line = data.stdout.readline()
     if not line:
         print("sensor not found")
         raise HTTPException(
-            status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
+            status_code=response_code.NOT_FOUND.value, detail=response_detail.SENSOR_NOT_FOUND.value)
     else: 
         for l in data.stdout:
             output = l.rstrip()
@@ -464,15 +464,14 @@ def get_sensor():
 @app.post('/project',status_code=response_code.CREATED.value)
 def post_project(x: Project):
     global cwd
-    global project_dir
     project = x.dict()
-    dir_name = '{}{}'.format(cwd,project_dir)
+    dir_name = '{}{}'.format(cwd,dir_path.PROJECT_DIR.value)
     for dir in os.listdir(dir_name):
         path = os.path.join(dir_name, dir)
         if len(path) != 0:
             os.system('rm -r {}'.format(path))
-    os.system('mkdir {}{}/{}'.format(cwd,project_dir,x.id))    
-    with open("{}{}/{}/project.config".format(cwd,project_dir,x.id), "w") as outfile:
+    os.system('mkdir {}{}/{}'.format(cwd,dir_path.PROJECT_DIR.value,x.id))    
+    with open("{}{}/{}/project.config".format(cwd,dir_path.PROJECT_DIR.value,x.id), "w") as outfile:
         json.dump(project, outfile)
         return(response_detail.CREATED.value)
 
@@ -480,7 +479,6 @@ def post_project(x: Project):
 @app.post('/project/{id}/model',status_code=response_code.CREATED.value)
 async def upload_model(id,file: UploadFile = File(...)):
     global cwd
-    global project_dir
     try:
         print("FILE:",file)
         print("filename :",file.filename)
@@ -493,24 +491,24 @@ async def upload_model(id,file: UploadFile = File(...)):
             await f.write(filecontent)
         count = 0
         
-        if os.path.isdir('{}{}/{}'.format(cwd,project_dir,id)):
+        if os.path.isdir('{}{}/{}'.format(cwd,dir_path.PROJECT_DIR.value,id)):
             
-            with open('{}{}/{}/project.config'.format(cwd,project_dir,id),'r+') as config:
+            with open('{}{}/{}/project.config'.format(cwd,dir_path.PROJECT_DIR.value,id),'r+') as config:
                 project = json.load(config)
                 if(project['id'] == id):
                     count = count + 1
                     name = project['name']
                     tar = tarfile.open('/opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent/src/outputFile.tar.gz')
-                    tar.extractall('{}{}/{}'.format(cwd,project_dir,project['id']))
+                    tar.extractall('{}{}/{}'.format(cwd,dir_path.PROJECT_DIR.value,project['id']))
                     print('EXTRACTED') 
                     os.remove('/opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent/src/outputFile.tar.gz')
 
-                    with open('{}{}/{}/param.yaml'.format(cwd,project_dir,project['id']),'r+') as f:
+                    with open('{}{}/{}/param.yaml'.format(cwd,dir_path.PROJECT_DIR.value,project['id']),'r+') as f:
                         model_param = json.dumps(yaml.load(f,Loader=yaml.FullLoader))
                         y=json.loads(model_param)
                         model_path = y['session']['model_path']
                         
-                    path = '{}{}/{}/{}'.format(cwd,project_dir,project['id'],model_path)
+                    path = '{}{}/{}/{}'.format(cwd,dir_path.PROJECT_DIR.value,project['id'],model_path)
                     model_checksum = hashlib.md5(open(path,'rb').read()).hexdigest()
                     project['model_file_checksum']=model_checksum
                     project['model_file']=model_path
@@ -518,10 +516,12 @@ async def upload_model(id,file: UploadFile = File(...)):
                     json.dump(project,config)
                     config.truncate()
     except Exception as e:
-        print("Error in uploading model to EVM whose exception is",e)           
+        print("Error in uploading model to EVM whose exception is",e)
+        raise HTTPException(
+            status_code=response_code.METHOD_NOT_ALLOWED.value, detail=response_detail.INVALID_INPUT.value)           
     if(count == 0):
         raise HTTPException(
-            status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
+            status_code=response_code.NOT_FOUND.value, detail=response_detail.PROJECT_NOT_FOUND.value)
     else:
         return(response_detail.CREATED.value,project['id'])
 
@@ -530,7 +530,7 @@ async def upload_model(id,file: UploadFile = File(...)):
 def get_projects():
     project_list = []
     count = 0
-    for path in glob.iglob('{}{}/**'.format(cwd,project_dir),recursive=True):
+    for path in glob.iglob('{}{}/**'.format(cwd,dir_path.PROJECT_DIR.value),recursive=True):
         if os.path.isfile(path): # filter dirs
             try:
                 with open(path,'r+') as config:
@@ -541,7 +541,7 @@ def get_projects():
                 continue
     if(count == 0):
         raise HTTPException(
-            status_code=404, detail="No registered projects found")
+            status_code=response_code.NOT_FOUND.value, detail=response_detail.PROJECT_NOT_FOUND.value)
     else:
         return(project_list)
 
@@ -551,15 +551,15 @@ def get_projects():
 def get_project_id(id):
     count = 0
     global cwd
-    global project_dir
-    if os.path.isdir('{}{}/{}'.format(cwd,project_dir,id)): # filter dirs
-            with open('{}{}/{}/project.config'.format(cwd,project_dir,id),'r+') as config:
+    
+    if os.path.isdir('{}{}/{}'.format(cwd,dir_path.PROJECT_DIR.value,id)): # filter dirs
+            with open('{}{}/{}/project.config'.format(cwd,dir_path.PROJECT_DIR.value,id),'r+') as config:
                 project = json.load(config)
                 if(project['id'] == id):
                     count = count + 1
     if(count == 0):
         raise HTTPException(
-            status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
+            status_code=response_code.NOT_FOUND.value, detail=response_detail.PROJECT_NOT_FOUND.value)
     else:
         return(project)
 
@@ -568,18 +568,17 @@ def get_project_id(id):
 def delete_project(id):
     count = 0
     global cwd
-    global project_dir
     
-    if os.path.isdir('{}{}/{}'.format(cwd,project_dir,id)): # filter dirs
-        with open('{}{}/{}/project.config'.format(cwd,project_dir,id),'r+') as config:
+    if os.path.isdir('{}{}/{}'.format(cwd,dir_path.PROJECT_DIR.value,id)): # filter dirs
+        with open('{}{}/{}/project.config'.format(cwd,dir_path.PROJECT_DIR.value,id),'r+') as config:
             project = json.load(config)
             if(project['id'] == id):
-                os.system('rm -r {}{}/{}'.format(cwd,project_dir,project['id']))
+                os.system('rm -r {}{}/{}'.format(cwd,dir_path.PROJECT_DIR.value,project['id']))
                 count = count + 1
     
     if(count == 0):
         raise HTTPException(
-            status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
+            status_code=response_code.NOT_FOUND.value, detail=response_detail.PROJECT_NOT_FOUND.value)
     else:
         return(response_detail.SUCCESS.value)
 
@@ -592,10 +591,10 @@ if __name__ == "__main__":
             pid = proc.pid  
             print(pid)                                                                                                                        
             os.system('kill -9 {}'.format(pid)) 
-    if not os.path.isdir('{}{}'.format(cwd,project_dir)):
-        os.system('mkdir {}{}'.format(cwd,project_dir)) 
+    if not os.path.isdir('{}{}'.format(cwd,dir_path.PROJECT_DIR.value)):
+        os.system('mkdir {}{}'.format(cwd,dir_path.PROJECT_DIR.value)) 
     
-    config_yaml_path = ['{}/../../../configs/image_classification.yaml'.format(cwd),'{}/../../../configs/object_detection.yaml'.format(cwd)]
+    config_yaml_path = ['{}{}/image_classification.yaml'.format(cwd,dir_path.CONFIG_DIR.value),'{}{}/object_detection.yaml'.format(cwd,dir_path.CONFIG_DIR.value)]
     for path in config_yaml_path:
         count = 0
         with open(path, 'r') as f:
