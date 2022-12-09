@@ -167,19 +167,17 @@ async def websocket_endpoint(websocket: WebSocket,client_id: int):
 async def websocket_endpoint(websocket: WebSocket,client_id: int):
     await manager3.connect(websocket)
     try:
-      while True:
-        with subprocess.Popen('{}{}/setup_cameras.sh'.format(cwd,dir_path.SCRIPTS_DIR.value),stdout=subprocess.PIPE,bufsize=1,universal_newlines=True,shell=True) as process:
-	    for line in process.stdout:
-        line = data.stdout.readline()
-        print(line)
-        if not line:
-            status='USB_CAM NOT FOUND'
-            await manager3.broadcast_status(status)
-        else:
-            status='AVAILABLE'
-            print('available')
-            await manager3.broadcast_status(status)
-            await time.sleep(0.5)
+        while True: 
+            data = subprocess.Popen('{}{}/setup_cameras.sh'.format(cwd,dir_path.SCRIPTS_DIR.value),stdout=subprocess.PIPE,bufsize=1,universal_newlines=True,shell=True)
+            line = data.stdout.readline()
+            if not line:
+                status='USB_CAM NOT FOUND'
+                await manager3.broadcast_status(status)
+            else:
+                status='AVAILABLE'
+                print('available')
+                await manager3.broadcast_status(status)
+                await asyncio.sleep(0.2)
     except Exception as e:
         manager3.disconnect(websocket)
 
