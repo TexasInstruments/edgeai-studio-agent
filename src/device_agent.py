@@ -26,6 +26,7 @@ import tarfile
 import sys
 import base64
 import aiofiles
+import socket
 
 app = FastAPI()
 active_connections: List[WebSocket] = []
@@ -127,9 +128,14 @@ class ConnectionManager:
    async def broadcast_inference(self, a):
       for connection in self.active_connections:
          await connection.send_json(a)
+   async def broadcast_status(self, a):
+      for connection in self.active_connections:
+         await connection.send_json(a)
+
 
 manager1 = ConnectionManager()
 manager2 = ConnectionManager()
+manager3 = ConnectionManager()
 
 #websocket endpoint to send inference log
 @app.websocket("/ws/{client_id}/log")
@@ -155,6 +161,27 @@ async def websocket_endpoint(websocket: WebSocket,client_id: int):
          await manager2.broadcast_inference(infer_data)
     except Exception as e:
         manager2.disconnect(websocket)
+
+#websocket endpoint to send inference log
+@app.websocket("/ws/{client_id}/usbcam_status")
+async def websocket_endpoint(websocket: WebSocket,client_id: int):
+    await manager3.connect(websocket)
+    try:
+      while True:
+        with subprocess.Popen('{}{}/setup_cameras.sh'.format(cwd,dir_path.SCRIPTS_DIR.value),stdout=subprocess.PIPE,bufsize=1,universal_newlines=True,shell=True) as process:
+	    for line in process.stdout:
+        line = data.stdout.readline()
+        print(line)
+        if not line:
+            status='USB_CAM NOT FOUND'
+            await manager3.broadcast_status(status)
+        else:
+            status='AVAILABLE'
+            print('available')
+            await manager3.broadcast_status(status)
+            await time.sleep(0.5)
+    except Exception as e:
+        manager3.disconnect(websocket)
 
 # PUT call endpoint for starting sensor session by running pipeline
 @app.put('/sensor-session/{id}',status_code=response_code.ACCEPTED.value)
@@ -365,6 +392,28 @@ def get_sensor_session_id(id):
     else:
         return sensor_session
 
+#DELETE sensor session 
+@app.delete('/sensor-session/{id}',status_code=response_code.ACCEPTED.value)
+def delete_sensor_session(id):
+    global ss_id
+    global sensor_session
+    pid=None
+    count = 0
+    if(id != ss_id):
+        raise HTTPException(
+            status_code=response_code.BAD_REQUEST.value, detail=response_detail.INVALID_ID.value)
+    process_name="node"
+    for proc in psutil.process_iter():
+        if process_name in proc.name():
+            pid = proc.pid
+            count = 1
+            os.kill(pid,2)
+            sensor_session=None
+            return(response_detail.ACCEPTED.value)
+    if(count == 0):
+        raise HTTPException(
+            status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
+
 #DELETE datapipeline of particular session    
 @app.delete('/sensor-session/{id}/dpipe',status_code=response_code.ACCEPTED.value)
 def delete_data_pipeline(id):
@@ -375,6 +424,11 @@ def delete_data_pipeline(id):
     global keyCount
     global config_yaml_path
     pid=None
+    UDP_IP = "192.168.38.17"
+    UDP_PORT = 8081
+    #MESSAGE = print("UDP target IP: %s" % UDP_IP)
+    print("UDP target port: %s" % UDP_PORT)
+    #print("message: %s" % MESSAGE)
     if(id != ss_id):
         raise HTTPException(
             status_code=response_code.BAD_REQUEST.value, detail=response_detail.INVALID_ID.value)
@@ -388,6 +442,10 @@ def delete_data_pipeline(id):
                     os.kill(pid,2)
                     sensor_session["session"]["data_pipeline_status"]="down"
                     sensor_session["session"]["data_pipeline_pid"]=0
+                    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
+                    sock.connect(('192.168.38.17',8081 ))
+                    sock.send(b'')
+                    sock.send(b'helllooo')
             return(response_detail.ACCEPTED.value)
         else:
             raise HTTPException(
@@ -591,6 +649,7 @@ if __name__ == "__main__":
             pid = proc.pid  
             print(pid)                                                                                                                        
             os.system('kill -9 {}'.format(pid)) 
+    os.system('killall node')
     if not os.path.isdir('{}{}'.format(cwd,dir_path.PROJECT_DIR.value)):
         os.system('mkdir {}{}'.format(cwd,dir_path.PROJECT_DIR.value)) 
     

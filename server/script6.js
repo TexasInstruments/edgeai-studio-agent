@@ -73,7 +73,17 @@ app.get('/raw_videostream', function (req, res) {
 
     emitter.on('data', function(data) {
          console.log('data event received...');
-	 res.write(data);
+         const chunk = data.length
+         if(chunk > 0){
+            res.write(data)
+         }
+         else{
+         console.log('empty')
+         res.status(500).end('stop')
+         
+         }
+
+	 //res.write(data);
     });
 
 	
@@ -83,6 +93,13 @@ app.get('/raw_videostream', function (req, res) {
     });
 
     console.log('returning...');
+});
+
+app.get('/test', function (req, res) {
+    emitter.emit('data', '');
+   
+
+    console.log('sent test data');
 });
 
 async function myResponse(req, res) {

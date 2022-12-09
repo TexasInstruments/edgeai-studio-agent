@@ -23,7 +23,7 @@ def run_loop(config,name=''):
                             stdout=subprocess.PIPE,
                             bufsize=1,
                             universal_newlines=True,shell=True)
-        time.sleep(0.5)
+        time.sleep(1)
         process_name="app_edgeai.py"
         file1 = open("log.txt", "w") 
         for proc in psutil.process_iter():
