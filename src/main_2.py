@@ -18,6 +18,7 @@ def run_loop(config,name=''):
         model_config = config
         ws1 = create_connection("ws://localhost:8000/ws/1/log")
         ws2= create_connection("ws://localhost:8000/ws/1/inference")
+        ws3= create_connection("ws://localhost:8000/ws/1/usbcam_status")
         time.sleep(0.5)
         process = subprocess.Popen('{}{}app_edgeai.py {}{}/{}.yaml'.format(cwd,dir_path.INFER_DIR.value,cwd,dir_path.CONFIG_DIR.value,model_config),
                             stdout=subprocess.PIPE,
@@ -25,16 +26,14 @@ def run_loop(config,name=''):
                             universal_newlines=True,shell=True)
         time.sleep(1)
         process_name="app_edgeai.py"
-        file1 = open("log.txt", "w") 
+        #file1 = open("log.txt", "w") 
         for proc in psutil.process_iter():
             if process_name in proc.name():
                 pid = proc.pid
         for line in process.stdout:
             line = line.rstrip()
-            file1.write(line)
-            file1.write('\n')
-            #line = re.sub(r'[^\x00-\x7F]+',' ', log)
-            #print(line)
+            #file1.write(line)
+            #file1.write('\n')
             #inference = r"total time.*?\s+?(?P<inference_time>\d{1,5}\.\d{1,})\s+?m?s.*?from\s+(?P<sampples>\d+?)\s+?samples"
             inference = r"inference.*?\s+?(?P<inference_time>\d{1,5}\.\d{1,})\s+?m?s.*?from\s+(?P<sampples>\d+?)\s+?samples"
             m = re.search(inference, line)
@@ -65,14 +64,39 @@ def run_loop(config,name=''):
                 ws2.send(json.dumps(infer_param))
             time.sleep(0.1)
             ws1.send(line)
+            data = subprocess.Popen('{}{}/setup_cameras.sh'.format(cwd,dir_path.SCRIPTS_DIR.value),stdout=subprocess.PIPE,bufsize=1,universal_newlines=True,shell=True)
+            line3 = data.stdout.readline()
+            if not line3:
+                status='USB_CAM NOT FOUND'
+                ws3.send(status)
+                time.sleep(0.1)
+            else:
+                status='AVAILABLE'
+                ws3.send(status)
+                time.sleep(0.1)
             time.sleep(0.1)
-        file1.close()
+        #file1.close()
     elif name=='RAWVIDEO':
         width = 640
         height = 360
         dev_num = config
+        ws3= create_connection("ws://localhost:8000/ws/1/usbcam_status")
         cmd='./python_gst.py {} {} {}'.format(dev_num,width,height)
-        os.system(cmd)
+        process = subprocess.Popen(cmd,stdout=subprocess.PIPE,bufsize=1,universal_newlines=True,shell=True)
+        #os.system(cmd)
+        while True: 
+            data = subprocess.Popen('{}{}/setup_cameras.sh'.format(cwd,dir_path.SCRIPTS_DIR.value),stdout=subprocess.PIPE,bufsize=1,universal_newlines=True,shell=True)
+            line = data.stdout.readline()
+            if not line:
+                status='USB_CAM NOT FOUND'
+                time.sleep(0.1)
+                ws3.send(status)
+                time.sleep(0.1)
+            else:
+                status='AVAILABLE'
+                time.sleep(0.1)
+                ws3.send(status)
+                time.sleep(0.1)
     else:
         print("invalid")
     

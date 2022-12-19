@@ -144,9 +144,8 @@ async def websocket_endpoint(websocket: WebSocket,client_id: int):
     try:
       while True:
          data = await websocket.receive_text()
-         #print(data)
-         #line = re.sub(r'[^\x00-\x7F]+',' ', data)
-         await manager1.broadcast_log(data)
+         text = re.sub(r'(\x9B|\x1B[\[\(\=])[0-?]*[ -\/]*([@-~]|$)', '', data)
+         await manager1.broadcast_log(text)
     except Exception as e:
         manager1.disconnect(websocket)
 
@@ -168,16 +167,9 @@ async def websocket_endpoint(websocket: WebSocket,client_id: int):
     await manager3.connect(websocket)
     try:
         while True: 
-            data = subprocess.Popen('{}{}/setup_cameras.sh'.format(cwd,dir_path.SCRIPTS_DIR.value),stdout=subprocess.PIPE,bufsize=1,universal_newlines=True,shell=True)
-            line = data.stdout.readline()
-            if not line:
-                status='USB_CAM NOT FOUND'
-                await manager3.broadcast_status(status)
-            else:
-                status='AVAILABLE'
-                print('available')
-                await manager3.broadcast_status(status)
-                await asyncio.sleep(0.2)
+            data = await websocket.receive_text()
+            await manager3.broadcast_status(data)
+               
     except Exception as e:
         manager3.disconnect(websocket)
 
@@ -438,6 +430,7 @@ def delete_data_pipeline(id):
                     pid = proc.pid
                     print(pid)
                     os.kill(pid,2)
+                    rawvideo_process.terminate()
                     sensor_session["session"]["data_pipeline_status"]="down"
                     sensor_session["session"]["data_pipeline_pid"]=0
                     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
