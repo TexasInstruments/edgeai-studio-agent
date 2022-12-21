@@ -334,7 +334,6 @@ def initiate_sensor_session(x: Sensor):
     for proc in psutil.process_iter():
         if process_name in proc.name():
             pid = proc.pid
-            print(pid)
             count = 1
             break
     if count != 1:
@@ -414,11 +413,7 @@ def delete_data_pipeline(id):
     global keyCount
     global config_yaml_path
     pid=None
-    UDP_IP = "192.168.38.17"
-    UDP_PORT = 8081
-    #MESSAGE = print("UDP target IP: %s" % UDP_IP)
-    print("UDP target port: %s" % UDP_PORT)
-    #print("message: %s" % MESSAGE)
+
     if(id != ss_id):
         raise HTTPException(
             status_code=response_code.BAD_REQUEST.value, detail=response_detail.INVALID_ID.value)
@@ -428,15 +423,11 @@ def delete_data_pipeline(id):
             for proc in psutil.process_iter():
                 if process_name in proc.name():
                     pid = proc.pid
-                    print(pid)
                     os.kill(pid,2)
                     rawvideo_process.terminate()
                     sensor_session["session"]["data_pipeline_status"]="down"
                     sensor_session["session"]["data_pipeline_pid"]=0
-                    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
-                    sock.connect(('192.168.38.17',8081 ))
-                    sock.send(b'')
-                    sock.send(b'helllooo')
+                
             return(response_detail.ACCEPTED.value)
         else:
             raise HTTPException(
@@ -477,7 +468,7 @@ def get_sensor():
     j=0
     global sensor
     global dev_num
-    print("get sensor details called")
+    print("get sensor endpoint called")
     if len(sensor) != 0:
         sensor.clear()
     line_count = 0
@@ -639,7 +630,7 @@ if __name__ == "__main__":
         if process_name in proc.name():                                                                                                                
             pid = proc.pid  
             print(pid)                                                                                                                        
-            os.system('kill -9 {}'.format(pid)) 
+            os.system('kill -1 {}'.format(pid)) 
     os.system('killall node')
     if not os.path.isdir('{}{}'.format(cwd,dir_path.PROJECT_DIR.value)):
         os.system('mkdir {}{}'.format(cwd,dir_path.PROJECT_DIR.value)) 

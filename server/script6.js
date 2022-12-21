@@ -38,12 +38,6 @@ var httpServer = http.createServer(app);
 
 var emitter = new EventEmitter();
 
-//send the html page which holds the video tag
-app.get('/', function (req, res) {
-    res.send('index.html');
-});
-
-
 //send raw video stream
 app.get('/raw_videostream/:id', function (req, res) {
     
@@ -103,13 +97,11 @@ var client = dgram.createSocket("udp4");
 
 udpServer.on('error', (err) => {
   console.log(`server error:\n${err.stack}`);
-  uspServer.close();
+  udpServer.close();
 });
 
 udpServer.on('message', (msg, rinfo) => {
   emitter.emit('data', msg);
-  // console.log(`server got: ${msg} from ${rinfo.address}:${rinfo.port}`);
-  // console.log('data event sending...');
 });
 
 udpServer.on('listening', () => {

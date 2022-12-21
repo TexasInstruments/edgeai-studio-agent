@@ -26,15 +26,11 @@ def run_loop(config,name=''):
                             universal_newlines=True,shell=True)
         time.sleep(1)
         process_name="app_edgeai.py"
-        #file1 = open("log.txt", "w") 
         for proc in psutil.process_iter():
             if process_name in proc.name():
                 pid = proc.pid
         for line in process.stdout:
             line = line.rstrip()
-            #file1.write(line)
-            #file1.write('\n')
-            #inference = r"total time.*?\s+?(?P<inference_time>\d{1,5}\.\d{1,})\s+?m?s.*?from\s+(?P<sampples>\d+?)\s+?samples"
             inference = r"inference.*?\s+?(?P<inference_time>\d{1,5}\.\d{1,})\s+?m?s.*?from\s+(?P<sampples>\d+?)\s+?samples"
             m = re.search(inference, line)
             if m is not None:
@@ -75,7 +71,7 @@ def run_loop(config,name=''):
                 ws3.send(status)
                 time.sleep(0.1)
             time.sleep(0.1)
-        #file1.close()
+
     elif name=='RAWVIDEO':
         width = 640
         height = 360
@@ -83,7 +79,7 @@ def run_loop(config,name=''):
         ws3= create_connection("ws://localhost:8000/ws/1/usbcam_status")
         cmd='./python_gst.py {} {} {}'.format(dev_num,width,height)
         process = subprocess.Popen(cmd,stdout=subprocess.PIPE,bufsize=1,universal_newlines=True,shell=True)
-        #os.system(cmd)
+      
         while True: 
             data = subprocess.Popen('{}{}/setup_cameras.sh'.format(cwd,dir_path.SCRIPTS_DIR.value),stdout=subprocess.PIPE,bufsize=1,universal_newlines=True,shell=True)
             line = data.stdout.readline()
