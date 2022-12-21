@@ -57,6 +57,10 @@ cd /opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent-main/
 ```
 cd /opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent-main/src 
 ```
+7. Run the following script for setting up the config.(one time execution)
+```
+python3 setup.py
+```
 8. Execute device agent script using CMD: 
 ```
 python3 device_agent.py  
