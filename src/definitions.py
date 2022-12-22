@@ -36,6 +36,7 @@ class server_details(Enum):
 class dir_path(Enum):
     PROJECT_DIR = '/../../../../projects'
     CONFIG_DIR = '/../../../configs'
+    CONFIG_DIR_FOR_SETUP = '/../../configs'
     SCRIPTS_DIR = '/../../../scripts'
     INFER_DIR = '/../../'
 
