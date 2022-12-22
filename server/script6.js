@@ -38,51 +38,41 @@ var httpServer = http.createServer(app);
 
 var emitter = new EventEmitter();
 
-//send the html page which holds the video tag
-app.get('/', function (req, res) {
-    res.send('index.html');
-});
-
-//send the inference video stream
-app.get('/inference_stream', function (req, res) {
-    
-    res.writeHead(200, {
-        'Content-Type': 'video/mp4',
-    });
-
-    emitter.on('data', function(data) {
-         console.log('data event received...');
-	 res.write(data);
-    });
-
-	
-    emitter.on('end', function() {
-        console.log('Response closed.');
-	res.end();
-    });
-
-    console.log('returning...');
-});
-
 //send raw video stream
-app.get('/raw_videostream', function (req, res) {
+app.get('/raw_videostream/:id', function (req, res) {
     
     res.writeHead(200, {
         'Content-Type': 'video/mp4',
     });
-
+    console.log(req.params.id)
     emitter.on('data', function(data) {
+         
          console.log('data event received...');
-	 res.write(data);
+         const chunk = data.length
+         if(chunk > 0){
+            res.write(data)
+         }
+         else{
+         console.log('empty')
+         res.status(500).end('stop')
+         
+         }
+     
     });
 
-	
     emitter.on('end', function() {
         console.log('Response closed.');
 	res.end();
     });
 
     console.log('returning...');
+});
+
+app.get('/test', function (req, res) {
+   
+   emitter.emit('data', '');
+   res.status(200).send('Stopped stream')
+
 });
 
 async function myResponse(req, res) {
@@ -107,13 +97,11 @@ var client = dgram.createSocket("udp4");
 
 udpServer.on('error', (err) => {
   console.log(`server error:\n${err.stack}`);
-  uspServer.close();
+  udpServer.close();
 });
 
 udpServer.on('message', (msg, rinfo) => {
   emitter.emit('data', msg);
-  // console.log(`server got: ${msg} from ${rinfo.address}:${rinfo.port}`);
-  // console.log('data event sending...');
 });
 
 udpServer.on('listening', () => {

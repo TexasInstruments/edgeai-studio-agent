@@ -41,27 +41,27 @@ ssh root@ip-address
 ```
 tar –xvf /opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent-main.tar.gz   
 ```
-4. Apply patch onto gst_wrapper.py for enabling the inference pipeline using CMD:
+4. Run the following bash scriptto apply patch on sdk files to enable inference:
 ```
-patch /opt/edge_ai_apps/apps_python/gst_wrapper.py /opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent-main/patch_folder/gst_wrapper_patch.txt 
+./run_patch.sh
 ```
-5. Apply patch onto post_process.py for resolving sdk bug to enable the object_detection inference using CMD:
-```
-patch /opt/edge_ai_apps/apps_python/post_process.py /opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent-main/patch_folder/post_process_patch.txt 
-```
-6. Navigate to the folder using CMD:
+5. Navigate to the folder using CMD:
 ```
 cd /opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent-main/ 
 ```
-7.  Run the following script to install dependencies.
+6.  Run the following script to install dependencies.
 ```
 ./req_native.sh 
 ```
-8. Go to src folder using CMD: 
+7. Go to src folder using CMD: 
 ```
 cd /opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent-main/src 
 ```
-9. Execute device agent script using CMD: 
+7. Run the following script for setting up the config.(one time execution)
+```
+python3 setup.py
+```
+8. Execute device agent script using CMD: 
 ```
 python3 device_agent.py  
 ```

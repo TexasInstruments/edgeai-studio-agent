@@ -26,6 +26,7 @@ import tarfile
 import sys
 import base64
 import aiofiles
+import socket
 
 app = FastAPI()
 active_connections: List[WebSocket] = []
@@ -127,9 +128,14 @@ class ConnectionManager:
    async def broadcast_inference(self, a):
       for connection in self.active_connections:
          await connection.send_json(a)
+   async def broadcast_status(self, a):
+      for connection in self.active_connections:
+         await connection.send_json(a)
+
 
 manager1 = ConnectionManager()
 manager2 = ConnectionManager()
+manager3 = ConnectionManager()
 
 #websocket endpoint to send inference log
 @app.websocket("/ws/{client_id}/log")
@@ -138,9 +144,8 @@ async def websocket_endpoint(websocket: WebSocket,client_id: int):
     try:
       while True:
          data = await websocket.receive_text()
-         #print(data)
-         #line = re.sub(r'[^\x00-\x7F]+',' ', data)
-         await manager1.broadcast_log(data)
+         text = re.sub(r'(\x9B|\x1B[\[\(\=])[0-?]*[ -\/]*([@-~]|$)', '', data)
+         await manager1.broadcast_log(text)
     except Exception as e:
         manager1.disconnect(websocket)
 
@@ -155,6 +160,18 @@ async def websocket_endpoint(websocket: WebSocket,client_id: int):
          await manager2.broadcast_inference(infer_data)
     except Exception as e:
         manager2.disconnect(websocket)
+
+#websocket endpoint to send inference log
+@app.websocket("/ws/{client_id}/usbcam_status")
+async def websocket_endpoint(websocket: WebSocket,client_id: int):
+    await manager3.connect(websocket)
+    try:
+        while True: 
+            data = await websocket.receive_text()
+            await manager3.broadcast_status(data)
+               
+    except Exception as e:
+        manager3.disconnect(websocket)
 
 # PUT call endpoint for starting sensor session by running pipeline
 @app.put('/sensor-session/{id}',status_code=response_code.ACCEPTED.value)
@@ -317,7 +334,6 @@ def initiate_sensor_session(x: Sensor):
     for proc in psutil.process_iter():
         if process_name in proc.name():
             pid = proc.pid
-            print(pid)
             count = 1
             break
     if count != 1:
@@ -365,6 +381,28 @@ def get_sensor_session_id(id):
     else:
         return sensor_session
 
+#DELETE sensor session 
+@app.delete('/sensor-session/{id}',status_code=response_code.ACCEPTED.value)
+def delete_sensor_session(id):
+    global ss_id
+    global sensor_session
+    pid=None
+    count = 0
+    if(id != ss_id):
+        raise HTTPException(
+            status_code=response_code.BAD_REQUEST.value, detail=response_detail.INVALID_ID.value)
+    process_name="node"
+    for proc in psutil.process_iter():
+        if process_name in proc.name():
+            pid = proc.pid
+            count = 1
+            os.kill(pid,2)
+            sensor_session=None
+            return(response_detail.ACCEPTED.value)
+    if(count == 0):
+        raise HTTPException(
+            status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
+
 #DELETE datapipeline of particular session    
 @app.delete('/sensor-session/{id}/dpipe',status_code=response_code.ACCEPTED.value)
 def delete_data_pipeline(id):
@@ -375,6 +413,7 @@ def delete_data_pipeline(id):
     global keyCount
     global config_yaml_path
     pid=None
+
     if(id != ss_id):
         raise HTTPException(
             status_code=response_code.BAD_REQUEST.value, detail=response_detail.INVALID_ID.value)
@@ -384,10 +423,11 @@ def delete_data_pipeline(id):
             for proc in psutil.process_iter():
                 if process_name in proc.name():
                     pid = proc.pid
-                    print(pid)
                     os.kill(pid,2)
+                    rawvideo_process.terminate()
                     sensor_session["session"]["data_pipeline_status"]="down"
                     sensor_session["session"]["data_pipeline_pid"]=0
+                
             return(response_detail.ACCEPTED.value)
         else:
             raise HTTPException(
@@ -428,7 +468,7 @@ def get_sensor():
     j=0
     global sensor
     global dev_num
-    print("get sensor details called")
+    print("get sensor endpoint called")
     if len(sensor) != 0:
         sensor.clear()
     line_count = 0
@@ -590,7 +630,8 @@ if __name__ == "__main__":
         if process_name in proc.name():                                                                                                                
             pid = proc.pid  
             print(pid)                                                                                                                        
-            os.system('kill -9 {}'.format(pid)) 
+            os.system('kill -1 {}'.format(pid)) 
+    os.system('killall node')
     if not os.path.isdir('{}{}'.format(cwd,dir_path.PROJECT_DIR.value)):
         os.system('mkdir {}{}'.format(cwd,dir_path.PROJECT_DIR.value)) 
     
