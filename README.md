@@ -41,15 +41,15 @@ ssh root@ip-address
 ```
 tar –xvf /opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent-main.tar.gz   
 ```
-5. Navigate to the folder using CMD:
+4. Navigate to the folder using CMD:
 ```
 cd /opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent-main/ 
 ```
-6.  Run the following script to install dependencies.
+5.  Run the following script to install dependencies.
 ```
 ./req_native.sh 
 ```
-7. Run the following script for setting up the config.(one time execution)
+6. Run the following script for setting up the config.(one time execution)
 ```
 python3 setup.py
 ```
@@ -57,15 +57,15 @@ python3 setup.py
 ```
 cd /opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent-main/scripts
 ```
-4. Run the following bash scriptto apply patch on sdk files to enable inference:
+8. Run the following bash scriptto apply patch on sdk files to enable inference:
 ```
 ./run_patch.sh
 ```
-7. Go to src folder using CMD: 
+9. Go to src folder using CMD: 
 ```
 cd /opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent-main/src 
 ```
-8. Execute device agent script using CMD: 
+10. Execute device agent script using CMD: 
 ```
 python3 device_agent.py  
 ```
