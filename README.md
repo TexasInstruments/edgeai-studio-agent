@@ -7,7 +7,7 @@
 1. First connect the UART cable to your PC; Open your terminal 
 2. Start minicom session on PC using: 
 ```
-sudo minicom -D /dev/ttyUSBX -c
+sudo minicom -D /dev/ttyUSBX -c on
 ```
 3. In above command COM port can vary (/dev/ttyUSB),to confirm that check which all usb serial ports available: 
 ```
@@ -33,17 +33,13 @@ ssh root@ip-address
 
 1. Download the evm agent repo tar file from gitlab into your pc from this link: (https://gitlab.ignitarium.in/ti-edgeai_studio/ti-edgeai-studio-evm-agent)
 
-(Note: If a clone of above repo can be done on target EVM this will be the recommended option since change we make can  andeasily be updated. If cloning skip steps 2 and 3 , always clone repo into /opt/edge_ai_apps/apps_python/ on target and i**f cloning replace ti-edgeai-studio-evm-agent-main with ti-edgeai-studio-evm-agent in the upcoming commands** ) 
+(Note: If a clone of above repo can be done on target EVM this will be the recommended option since changes we make can easily be updated. If cloning skip steps 2 and 3 , always clone repo into /opt/edge_ai_apps/apps_python/ on target and **if cloning replace ti-edgeai-studio-evm-agent-main with ti-edgeai-studio-evm-agent in the upcoming commands and inside run_patch.sh script** ) 
 
 2. Transfer above .tar into target to this location  /opt/edge_ai_apps/apps_python/ 
 
 3. Extract the file in device using command(Note: Extract to /opt/edge_ai_apps/apps_python/ location) :  
 ```
 tar –xvf /opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent-main.tar.gz   
-```
-4. Run the following bash scriptto apply patch on sdk files to enable inference:
-```
-./run_patch.sh
 ```
 5. Navigate to the folder using CMD:
 ```
@@ -53,13 +49,21 @@ cd /opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent-main/
 ```
 ./req_native.sh 
 ```
-7. Go to src folder using CMD: 
-```
-cd /opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent-main/src 
-```
 7. Run the following script for setting up the config.(one time execution)
 ```
 python3 setup.py
+```
+7. Go to scripts folder using CMD: 
+```
+cd /opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent-main/scripts
+```
+4. Run the following bash scriptto apply patch on sdk files to enable inference:
+```
+./run_patch.sh
+```
+7. Go to src folder using CMD: 
+```
+cd /opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent-main/src 
 ```
 8. Execute device agent script using CMD: 
 ```

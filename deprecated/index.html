@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+
+<head>
+    <script src="http://code.jquery.com/jquery-git2.js"></script>	
+    <title>GStreamer with NodeJS Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=0.9">
+
+    <style>
+        html,
+        body {
+            overflow: hidden;
+        }
+    </style>
+    
+    <script>
+        function buffer() {
+            //Start playback as soon as possible to minimize latency at startup 
+            var dStream = document.getElementById('vidStream');
+            try {
+		// dStream.muted = false;
+                dStream.play();
+            } catch (error) {
+                console.log("Error in buffer() method.");
+                console.log(error);
+            }
+  dStream.addEventListener('loadedmetadata', function() {
+    if (dStream.buffered.length === 0) return;
+
+    const bufferedSeconds = dStream.buffered.end(0) - dStream.buffered.start(0);
+    console.log(`${bufferedSeconds} seconds of video are ready to play.`);
+  });
+  dStream.addEventListener('loadeddata', function() {
+    if (dStream.buffered.length === 0) return;
+
+    const bufferedSeconds = dStream.buffered.end(0) - dStream.buffered.start(0);
+    console.log(`${bufferedSeconds} seconds of video are ready to play.`);
+  });
+        }
+    </script>
+</head>
+
+<body onload="buffer();">
+    <video id="vidStream" width="1080" height="720" preload="none" controls muted>
+        <!-- source src="/stream" type="video/x-matroska"/-->
+        <!-- source src="/stream" type="video/mp4"/ -->
+        <!-- source src="/stream" type="video/webm" /-->
+        <!-- source src="/stream" type="video/ogg" /-->
+        <!-- fallback -->
+        Your browser does not support the <code>video</code> element.
+    </video>
+    <div class= "videoListItemBox">
+       <a href="#" data-src="/raw_videostream/" 
+         data-poster="http://lorempixel.com/640/320/">Live Inference Video</a>
+       <a href="#" data-src="/raw_videostream" 
+         data-poster="http://lorempixel.com/640/320/">Live Webcam Video</a>
+    <div>    
+    <script>
+
+$(function(){
+  $('.videoListItemBox > a ').on('click', function (e) {
+    var link = $(this);
+    $('#vidStream')
+        .attr('poster', link.data('poster'))
+        .attr('src', link.data('src'))
+        .attr('type', "video/mp4")
+        .get(0).play();
+    e.preventDefault(); 
+  });
+});
+
+  vidStream.addEventListener('loadedmetadata', function() {
+    if (vidStream.buffered.length === 0) return;
+
+    const bufferedSeconds = vidStream.buffered.end(0) - vidStream.buffered.start(0);
+    console.log(`${bufferedSeconds} seconds of video are ready to play.`);
+  });
+  vidStream.addEventListener('loadeddata', function() {
+    if (vidStream.buffered.length === 0) return;
+
+    const bufferedSeconds = vidStream.buffered.end(0) - vidStream.buffered.start(0);
+    console.log(`${bufferedSeconds} seconds of video are ready to play.`);
+  });
+  vidStream.addEventListener('canplay', (event) => {
+    console.log('Video can start, but not sure it will play through.');
+    if (vidStream.buffered.length === 0) return;
+
+    const bufferedSeconds = vidStream.buffered.end(0) - vidStream.buffered.start(0);
+    console.log(`${bufferedSeconds} seconds of video are ready to play.`);
+  });
+  vidStream.addEventListener('canplaythrough', (event) => {
+    console.log('Video can playthrough, without having to stop to buffer.');
+    if (vidStream.buffered.length === 0) return;
+
+    const bufferedSeconds = vidStream.buffered.end(0) - vidStream.buffered.start(0);
+    console.log(`${bufferedSeconds} seconds of video are ready to play.`);
+  });
+    </script>
+</body>
