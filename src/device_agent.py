@@ -53,7 +53,7 @@ cwd = os.getcwd()
 keyCount = 0
 config_yaml_path = None
 dev_num = None
-
+current_pos = None
 
 # Define request-body using pydantic
 class Session(BaseModel):
@@ -184,6 +184,7 @@ def start_sensor_session(id,x: Model):
     global keyCount
     global dev_num
     global config_yaml_path
+    global current_pos
     process_name="node"
     count = 0
     model_type=None
@@ -238,8 +239,8 @@ def start_sensor_session(id,x: Model):
                         with open('{}/dataset.yaml'.format(path),'r') as f:
                             categories = {w['id']:w['name'] for w in yaml.safe_load(f.read())["categories"]}
                             print(categories)
-                        with open('{}{}classnames.py'.format(cwd,dir_path.INFER_DIR.value),'a') as fobj:
-                            fobj.writelines("\nmodelmaker="+str(categories))       
+                        with open('{}{}classnames.py'.format(cwd,dir_path.INFER_DIR.value),'a') as fobj: 
+                            fobj.writelines("modelmaker="+str(categories))    
             
             if(pcount == 0):
                 raise HTTPException(
@@ -412,6 +413,7 @@ def delete_data_pipeline(id):
     global ss_id
     global keyCount
     global config_yaml_path
+    global current_pos
     pid=None
 
     if(id != ss_id):
