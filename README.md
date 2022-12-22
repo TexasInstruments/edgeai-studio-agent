@@ -7,7 +7,7 @@
 1. First connect the UART cable to your PC; Open your terminal 
 2. Start minicom session on PC using: 
 ```
-sudo minicom -D /dev/ttyUSBX -c
+sudo minicom -D /dev/ttyUSBX -c on
 ```
 3. In above command COM port can vary (/dev/ttyUSB),to confirm that check which all usb serial ports available: 
 ```
