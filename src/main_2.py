@@ -47,7 +47,7 @@ def run_loop(config,name=''):
                 
                 infer_param = {
                          "inference_time": {
-                            "unit": "s",
+                            "unit": "ms",
                             "value": m.group("inference_time"),
                             "dtype": "float"
                             },

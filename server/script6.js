@@ -1,8 +1,6 @@
 var dgram = require('dgram');
 var express = require('express')
 var http = require('http')
-var net = require('net');
-var child = require('child_process');
 var EventEmitter = require('events').EventEmitter;
 let cors = require("cors");
 var bodyParser = require('body-parser')
@@ -33,9 +31,8 @@ app.use((req, res, next) => {
   );
   next();
 });
-//#################################
-var httpServer = http.createServer(app);
 
+var httpServer = http.createServer(app);
 var emitter = new EventEmitter();
 
 //send raw video stream
@@ -67,7 +64,7 @@ app.get('/raw_videostream/:id', function (req, res) {
 
     console.log('returning...');
 });
-
+//Stop udp server from sending pending data after dpipe
 app.get('/test', function (req, res) {
    
    emitter.emit('data', '');
@@ -93,7 +90,6 @@ function wait(ms) {
 }
 
 const udpServer = dgram.createSocket('udp4');
-var client = dgram.createSocket("udp4");
 
 udpServer.on('error', (err) => {
   console.log(`server error:\n${err.stack}`);
