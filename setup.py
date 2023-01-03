@@ -6,7 +6,7 @@ sys.path.append('/opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent/src/')
 
 from definitions import dir_path
 cwd = os.getcwd()
- 
+os.system('./req_native.sh') 
 config_yaml_path = ['{}{}/image_classification.yaml'.format(cwd,dir_path.CONFIG_DIR_FOR_SETUP.value),'{}{}/object_detection.yaml'.format(cwd,dir_path.CONFIG_DIR_FOR_SETUP.value)]
 for path in config_yaml_path:
         

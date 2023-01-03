@@ -26,7 +26,6 @@ import tarfile
 import sys
 import base64
 import aiofiles
-import socket
 
 app = FastAPI()
 active_connections: List[WebSocket] = []
@@ -53,7 +52,6 @@ cwd = os.getcwd()
 keyCount = 0
 config_yaml_path = None
 dev_num = None
-current_pos = None
 
 # Define request-body using pydantic
 class Session(BaseModel):
@@ -184,7 +182,6 @@ def start_sensor_session(id,x: Model):
     global keyCount
     global dev_num
     global config_yaml_path
-    global current_pos
     process_name="node"
     count = 0
     model_type=None
@@ -413,7 +410,6 @@ def delete_data_pipeline(id):
     global ss_id
     global keyCount
     global config_yaml_path
-    global current_pos
     pid=None
 
     if(id != ss_id):
@@ -636,7 +632,7 @@ if __name__ == "__main__":
     os.system('killall node')
     if not os.path.isdir('{}{}'.format(cwd,dir_path.PROJECT_DIR.value)):
         os.system('mkdir {}{}'.format(cwd,dir_path.PROJECT_DIR.value)) 
-    
+    os.system("sed -i '/modelmaker/d' {}{}classnames.py".format(cwd,dir_path.INFER_DIR.value))
     config_yaml_path = ['{}{}/image_classification.yaml'.format(cwd,dir_path.CONFIG_DIR.value),'{}{}/object_detection.yaml'.format(cwd,dir_path.CONFIG_DIR.value)]
     for path in config_yaml_path:
         count = 0
