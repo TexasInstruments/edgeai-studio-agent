@@ -30,7 +30,7 @@ def on_message(bus: Gst.Bus, message: Gst.Message, loop: GLib.MainLoop):
 if __name__ == '__main__':
     Gst.init()
     print("before playing")
-    p = Gst.parse_launch(' v4l2src device={} ! videoconvert ! video/x-raw, width={}, height={}, framerate=30/1, format=NV12 ! v4l2h264enc gop-size=30 ! h264parse ! mp4mux fragment-duration=1 ! udpsink host=127.0.0.1  port=8081'.format(sys.argv[1],sys.argv[2],sys.argv[3]))
+    p = Gst.parse_launch(' v4l2src device={} ! videoconvert ! video/x-raw, width={}, height={}, framerate=30/1, format=NV12 ! v4l2h264enc bitrate=1000000 gop-size=30 ! h264parse ! mp4mux fragment-duration=1 ! udpsink host=127.0.0.1  port=8081'.format(sys.argv[1],sys.argv[2],sys.argv[3]))
     bus = p.get_bus()
     # allow bus to emit messages to main thread
     bus.add_signal_watch()

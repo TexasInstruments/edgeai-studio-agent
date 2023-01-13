@@ -57,7 +57,7 @@ dev_num = None
 class Session(BaseModel):
     id: str
     http_port: int = Field(default=server_details.HTTP_PORT.value)
-    http_url: str = Field(default="/stream")
+    http_url: str = Field(default="/raw_videostream")
     http_status: str 
     http_pid: int
     ws_port: int = Field(default=server_details.WS_PORT.value)
@@ -203,6 +203,7 @@ def start_sensor_session(id,x: Model):
                 rawvideo_process = RawvideoProcess(dev_num)
                 rawvideo_process.start()
                 process_name="python_gst.py"
+                time.sleep(1.5)
                 for proc in psutil.process_iter():
                     if process_name in proc.name():
                         pid = proc.pid
@@ -275,6 +276,7 @@ def start_sensor_session(id,x: Model):
                         inference_process = InferenceProcess(model_type)
                         inference_process.start()
                         process_name="app_edgeai.py"
+                        time.sleep(1.5)
                         for proc in psutil.process_iter():
                             if process_name in proc.name():
                                 pid = proc.pid
@@ -348,7 +350,7 @@ def initiate_sensor_session(x: Sensor):
                 pid = proc.pid
                 print("newly created node",pid)
         ss_id = str(uuid.uuid4())
-        session = Model(session = { "id":ss_id, "http_status":"started", "http_pid":p.pid + 1, "udp_status":"started", "udp_pid":p.pid + 1, "data_pipeline_status":"down","data_pipeline_pid":0},sensor = { "name":x.name, "id":x.id, "type":x.type, "device": [{"id":x.device[0].id, "type":x.device[0].type, "description":x.device[0].type, "status":x.device[0].status}]})
+        session = Model(session = { "id":ss_id, "http_status":"started", "http_pid":p.pid, "udp_status":"started", "udp_pid":p.pid, "data_pipeline_status":"down","data_pipeline_pid":0},sensor = { "name":x.name, "id":x.id, "type":x.type, "device": [{"id":x.device[0].id, "type":x.device[0].type, "description":x.device[0].type, "status":x.device[0].status}]})
         sensor_session = session.dict()
         return session
     return sensor_session
