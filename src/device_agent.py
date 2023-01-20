@@ -1,6 +1,32 @@
-'''
-Fast API endpoints for Agent on EVM
-'''
+#  Copyright (C) 2023 Texas Instruments Incorporated - http://www.ti.com/
+#
+#  Redistribution and use in source and binary forms, with or without
+#  modification, are permitted provided that the following conditions
+#  are met:
+#
+#    Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#
+#    Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the
+#    distribution.
+#
+#    Neither the name of Texas Instruments Incorporated nor the names of
+#    its contributors may be used to endorse or promote products derived
+#    from this software without specific prior written permission.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+#  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+#  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+#  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+#  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+#  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+#  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+#  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+#  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+#  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+#  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import time
 import uvicorn
@@ -10,7 +36,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import os
 import subprocess
-from main_2 import InferenceProcess,RawvideoProcess
+from vstream_thread import InferenceProcess,RawvideoProcess
 import re
 import psutil
 import json
@@ -234,11 +260,11 @@ def start_sensor_session(id,x: Model):
                     if(project['id'] == x.project.id):
                         pcount = pcount + 1
                         path = '{}{}/{}'.format(cwd,dir_path.PROJECT_DIR.value,project['id'])
-                        with open('{}/dataset.yaml'.format(path),'r') as f:
+                        '''with open('{}/dataset.yaml'.format(path),'r') as f:
                             categories = {w['id']:w['name'] for w in yaml.safe_load(f.read())["categories"]}
                             print(categories)
                         with open('{}{}classnames.py'.format(cwd,dir_path.INFER_DIR.value),'a') as fobj: 
-                            fobj.writelines("modelmaker="+str(categories))    
+                            fobj.writelines("modelmaker="+str(categories)) '''   
             
             if(pcount == 0):
                 raise HTTPException(
@@ -265,7 +291,8 @@ def start_sensor_session(id,x: Model):
                     if model_type == "image_classification":
                         model = {"model{}".format(keyCount):{"model_path":"{}".format(path),"topN":1}}
                     y["models"].update(model)
-                    y["flows"]["flow0"]["models"] = ['model{}'.format(keyCount)]
+                    #y["flows"]["flow0"]["models"] = ['model{}'.format(keyCount)]
+                    y["flows"]["flow0"][2] = 'model{}'.format(keyCount)
                     y["inputs"]["input0"]["source"] = dev_num
                     
                 with open(config_yaml_path,'w') as fout:
@@ -288,7 +315,7 @@ def start_sensor_session(id,x: Model):
                         sensor_session = x.dict()
                         return x
                     except:    
-                        os.system("sed -i '/modelmaker/d' {}{}classnames.py".format(cwd,dir_path.INFER_DIR.value)) 
+                        #os.system("sed -i '/modelmaker/d' {}{}classnames.py".format(cwd,dir_path.INFER_DIR.value)) 
                         dir_name = '{}{}'.format(cwd,dir_path.PROJECT_DIR.value)
                         for dir in os.listdir(dir_name):
                             path = os.path.join(dir_name, dir)
@@ -338,7 +365,7 @@ def initiate_sensor_session(x: Sensor):
             break
     if count != 1:
         print("starting server")
-        p = subprocess.Popen("node ../server/script6.js",stdout=subprocess.PIPE,bufsize=1,universal_newlines=True,shell=True)
+        p = subprocess.Popen("node ../server/node_webserver.js",stdout=subprocess.PIPE,bufsize=1,universal_newlines=True,shell=True)
         for line in p.stdout:
             output = line.rstrip()
             print(output)
@@ -444,7 +471,7 @@ def delete_data_pipeline(id):
                     sensor_session["session"]["data_pipeline_pid"]=0
                     sensor_session["session"]["ws_status"]="down"
                     sensor_session["session"]["ws_pid"]=0
-                    os.system("sed -i '/modelmaker/d' {}{}classnames.py".format(cwd,dir_path.INFER_DIR.value))
+                    #os.system("sed -i '/modelmaker/d' {}{}classnames.py".format(cwd,dir_path.INFER_DIR.value))
                     with open(config_yaml_path, 'r') as fin:
                         y = json.dumps(yaml.load(fin,Loader=yaml.FullLoader))
                         y=json.loads(y) 
@@ -457,7 +484,7 @@ def delete_data_pipeline(id):
                     return(response_detail.ACCEPTED.value) 
         else:
 
-            os.system("sed -i '/modelmaker/d' {}{}classnames.py".format(cwd,dir_path.INFER_DIR.value)) 
+            #os.system("sed -i '/modelmaker/d' {}{}classnames.py".format(cwd,dir_path.INFER_DIR.value)) 
             raise HTTPException(
                 status_code=response_code.NOT_FOUND.value, detail=response_detail.SESSION_NOT_FOUND.value)
 
@@ -538,10 +565,10 @@ async def upload_model(id,file: UploadFile = File(...)):
                 if(project['id'] == id):
                     count = count + 1
                     name = project['name']
-                    tar = tarfile.open('/opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent/src/outputFile.tar.gz')
+                    tar = tarfile.open('{}outputFile.tar.gz'.format(cwd))
                     tar.extractall('{}{}/{}'.format(cwd,dir_path.PROJECT_DIR.value,project['id']))
                     print('EXTRACTED') 
-                    os.remove('/opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent/src/outputFile.tar.gz')
+                    os.remove('{}outputFile.tar.gz'.format(cwd))
 
                     with open('{}{}/{}/param.yaml'.format(cwd,dir_path.PROJECT_DIR.value,project['id']),'r+') as f:
                         model_param = json.dumps(yaml.load(f,Loader=yaml.FullLoader))
@@ -634,7 +661,7 @@ if __name__ == "__main__":
     os.system('killall node')
     if not os.path.isdir('{}{}'.format(cwd,dir_path.PROJECT_DIR.value)):
         os.system('mkdir {}{}'.format(cwd,dir_path.PROJECT_DIR.value)) 
-    os.system("sed -i '/modelmaker/d' {}{}classnames.py".format(cwd,dir_path.INFER_DIR.value))
+    '''os.system("sed -i '/modelmaker/d' {}{}classnames.py".format(cwd,dir_path.INFER_DIR.value))
     config_yaml_path = ['{}{}/image_classification.yaml'.format(cwd,dir_path.CONFIG_DIR.value),'{}{}/object_detection.yaml'.format(cwd,dir_path.CONFIG_DIR.value)]
     for path in config_yaml_path:
         count = 0
@@ -659,7 +686,7 @@ if __name__ == "__main__":
                 y["flows"]["flow0"]["mosaic"]["mosaic0"]["height"] = 360
                 
             with open(path,'w') as fout:
-                yaml.safe_dump(y,fout,sort_keys=False)
+                yaml.safe_dump(y,fout,sort_keys=False)'''
             
     uvicorn.run("device_agent:app",
                 host="0.0.0.0", port=8000, reload=True, ws_ping_interval=math.inf, ws_ping_timeout=math.inf)
