@@ -34,13 +34,12 @@ var http = require('http')
 var EventEmitter = require('events').EventEmitter;
 let cors = require("cors");
 var bodyParser = require('body-parser')
-//require('log-timestamp');   //adds timestamp in console.log()
 
 var app = express();
 app.use(express.static(__dirname + '/'));
-
-const port = 8080;  //change port number is required
-const udp_port = 8081;  //change port number is required
+//Set HTTP and UDP port number
+const port = 8080;  
+const udp_port = 8081; 
 
 //Set Cors settings
 const corsOptions = {
@@ -51,7 +50,6 @@ app.use(cors(corsOptions));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-/* respond headers */
 // Add Access Control Allow Origin headers
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -65,7 +63,10 @@ app.use((req, res, next) => {
 var httpServer = http.createServer(app);
 var emitter = new EventEmitter();
 
-//send raw video stream
+/**
+ * send raw video as response whose type is video/mp4
+ * whenever data is emitted from udp socket
+ */
 app.get('/raw_videostream/:id', function (req, res) {
     
     res.writeHead(200, {
@@ -94,7 +95,10 @@ app.get('/raw_videostream/:id', function (req, res) {
 
     console.log('returning...');
 });
-//Stop udp server from sending pending data after dpipe
+
+/**Stop udp server from sending pending data after 
+ *deleting pipeline
+ */
 app.get('/test', function (req, res) {
    
    emitter.emit('data', '');
@@ -126,6 +130,7 @@ udpServer.on('error', (err) => {
   udpServer.close();
 });
 
+//Emit video data received from gstreamer 
 udpServer.on('message', (msg, rinfo) => {
   emitter.emit('data', msg);
 });
@@ -134,7 +139,6 @@ udpServer.on('listening', () => {
   const address = udpServer.address();
   console.log(`UDP Server listening ${address.address}:${address.port}`);
 });
-
 
 udpServer.bind(udp_port);
 
