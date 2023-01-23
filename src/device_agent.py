@@ -45,7 +45,7 @@ from fastapi.responses import FileResponse
 import uuid
 import glob
 import hashlib
-from definitions import response_code,response_detail,server_details,dir_path
+from definitions import Response_Code,Response_Details,Server_Details,Dir_Path
 import yaml
 import math
 import tarfile
@@ -55,6 +55,7 @@ import aiofiles
 
 app = FastAPI()
 active_connections: List[WebSocket] = []
+#Set CORS setting
 origins = [
 "http://localhost",
 "http://localhost:3000",
@@ -79,30 +80,36 @@ keyCount = 0
 config_yaml_path = None
 dev_num = None
 
-# Define request-body using pydantic
+#Below classes define request-body using pydantic
 class Session(BaseModel):
+    """
+    Class to store sensor session parameters
+    """
     id: str
-    http_port: int = Field(default=server_details.HTTP_PORT.value)
-    http_url: str = Field(default="/raw_videostream")
+    http_port: int = Field(default=Server_Details.HTTP_PORT.value)
+    http_url: str = Field(default=Server_Details.HTTP_URL.value)
     http_status: str 
     http_pid: int
-    ws_port: int = Field(default=server_details.WS_PORT.value)
-    ws_url: str = Field(default=server_details.WS_URL.value)
+    ws_port: int = Field(default=Server_Details.WS_PORT.value)
+    ws_url: str = Field(default=Server_Details.WS_URL.value)
     ws_status: str = Field(default="down")
     ws_pid: int = Field(default=0)
-    udp_server_port: int = Field(default=server_details.UDP_SERVER_PORT.value)
-    udp_client_port: int = Field(default=server_details.UDP_CLIENT_PORT.value)
+    udp_server_port: int = Field(default=Server_Details.UDP_SERVER_PORT.value)
+    udp_client_port: int = Field(default=Server_Details.UDP_CLIENT_PORT.value)
     udp_status: str
     udp_pid: int
-    tcp_server_port: int = Field(default=server_details.TCP_SERVER_PORT.value)
-    tcp_client_port: int = Field(default=server_details.TCP_CLIENT_PORT.value)
-    tcp_status: str = Field(default=server_details.TCP_STATUS.value)
-    tcp_pid: int = Field(default=server_details.TCP_PID.value)
+    tcp_server_port: int = Field(default=Server_Details.TCP_SERVER_PORT.value)
+    tcp_client_port: int = Field(default=Server_Details.TCP_CLIENT_PORT.value)
+    tcp_status: str = Field(default=Server_Details.TCP_STATUS.value)
+    tcp_pid: int = Field(default=Server_Details.TCP_PID.value)
     data_pipeline_status: str
     data_pipeline_pid: int
 
 
 class DeviceItem(BaseModel):
+    """
+    Class to store device details
+    """
     id: str
     type: str
     description: str
@@ -110,6 +117,9 @@ class DeviceItem(BaseModel):
 
 
 class Sensor(BaseModel):
+    """
+    Class to store sensor details
+    """
     name: str
     id: str
     type: str
@@ -117,6 +127,9 @@ class Sensor(BaseModel):
 
 
 class Project(BaseModel):
+    """
+    Class to store project details
+    """
     id: str = Field(default="null")
     name: str = Field(default="null") 
     sensor: str = Field(default="null")
@@ -127,54 +140,71 @@ class Project(BaseModel):
     model_file_checksum: str = Field(default="null")
 
 class Model(BaseModel):
+    """
+    Class to store above classes
+    """
     session: Session
     sensor: Sensor
     project: Optional[Project]
     inference: Optional[bool]
 
 class ConnectionManager:
-   def __init__(self):
-      self.active_connections: List[WebSocket] = []
+    """
+    Class to manage websocket endpoints
+    """
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
 
-   async def connect(self, websocket: WebSocket):
-      await websocket.accept()
-      self.active_connections.append(websocket)
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
 
-   def disconnect(self, websocket: WebSocket):
-      self.active_connections.remove(websocket)
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
 
-   async def send_personal_message(self, message: str, websocket: WebSocket):
-      await websocket.send_text(message)
+    async def send_personal_message(self, message: str, websocket: WebSocket):
+        await websocket.send_text(message)
 
-   async def broadcast_log(self, a):
-      for connection in self.active_connections:
-         await connection.send_json(a)
-   async def broadcast_inference(self, a):
-      for connection in self.active_connections:
-         await connection.send_json(a)
-   async def broadcast_status(self, a):
-      for connection in self.active_connections:
-         await connection.send_json(a)
+    async def broadcast_log(self, a):
+        for connection in self.active_connections:
+            await connection.send_json(a)
+
+    async def broadcast_inference(self, a):
+        for connection in self.active_connections:
+            await connection.send_json(a)
+
+    async def broadcast_status(self, a):
+        for connection in self.active_connections:
+            await connection.send_json(a)
 
 
 manager1 = ConnectionManager()
 manager2 = ConnectionManager()
 manager3 = ConnectionManager()
 
-#websocket endpoint to send inference log
+
 @app.websocket("/ws/{client_id}/log")
+"""
+Websocket endpoint to send inference log
+"""
 async def websocket_endpoint(websocket: WebSocket,client_id: int):
     await manager1.connect(websocket)
     try:
       while True:
+        """
+        Receives log from websocket endpoint in vstream_thread file
+        and broadcast to GUI
+        """
          data = await websocket.receive_text()
          text = re.sub(r'(\x9B|\x1B[\[\(\=])[0-?]*[ -\/]*([@-~]|$)', '', data)
          await manager1.broadcast_log(text)
     except Exception as e:
         manager1.disconnect(websocket)
 
-#websocket endpoint to send inference log
 @app.websocket("/ws/{client_id}/inference")
+"""
+Websocket endpoint to send inference parameters
+"""
 async def websocket_endpoint(websocket: WebSocket,client_id: int):
     await manager2.connect(websocket)
     try:
@@ -185,8 +215,10 @@ async def websocket_endpoint(websocket: WebSocket,client_id: int):
     except Exception as e:
         manager2.disconnect(websocket)
 
-#websocket endpoint to send inference log
 @app.websocket("/ws/{client_id}/usbcam_status")
+"""
+Websocket endpoint to send usb camera status(connected or not)
+"""
 async def websocket_endpoint(websocket: WebSocket,client_id: int):
     await manager3.connect(websocket)
     try:
@@ -197,9 +229,17 @@ async def websocket_endpoint(websocket: WebSocket,client_id: int):
     except Exception as e:
         manager3.disconnect(websocket)
 
-# PUT call endpoint for starting sensor session by running pipeline
-@app.put('/sensor-session/{id}',status_code=response_code.ACCEPTED.value)
+@app.put('/sensor-session/{id}',status_code=Response_Code.ACCEPTED.value)
+"""
+Start sensor session access by setting up all the required data access pipeline processes
+"""
 def start_sensor_session(id,x: Model):
+    """
+    Function to start sensor session 
+    Args:
+        id: Sensor session id parameter
+        x: Object of class Model 
+    """
     global ss_id
     global rawvideo_process
     global inference_process
@@ -218,14 +258,15 @@ def start_sensor_session(id,x: Model):
             break
     if(count == 0):
         raise HTTPException(
-            status_code=response_code.NOT_FOUND.value, detail=response_detail.SESSION_NOT_FOUND.value)
+            status_code=Response_Code.NOT_FOUND.value, detail=Response_Details.SESSION_NOT_FOUND.value)
     if(id != ss_id):
-         raise HTTPException(status_code=response_code.BAD_REQUEST.value, detail=response_detail.INVALID_ID.value)
+         raise HTTPException(status_code=Response_Code.BAD_REQUEST.value, detail=Response_Details.INVALID_ID.value)
     if(x.inference == False):
         
         if rawvideo_process is None or not rawvideo_process.is_alive():
             
             try:
+                #Start raw video stream thread
                 rawvideo_process = RawvideoProcess(dev_num)
                 rawvideo_process.start()
                 process_name="python_gst.py"
@@ -236,6 +277,8 @@ def start_sensor_session(id,x: Model):
                         print(pid)
                 x.session.data_pipeline_pid=pid
                 x.session.data_pipeline_status="up"
+                x.session.ws_status="up"
+                x.session.ws_pid=os.getpid()
                 sensor_session = x.dict()
                 return x
             except:
@@ -246,41 +289,41 @@ def start_sensor_session(id,x: Model):
 
         else:
             raise HTTPException(
-                status_code=response_code.CONFLICT.value, detail=response_detail.SESSION_CONFLICT.value)
+                status_code=Response_Code.CONFLICT.value, detail=Response_Details.SESSION_CONFLICT.value)
             
     else:
         if inference_process is None or not inference_process.is_alive():
             print("inside inference")
             pcount = 0
-            if os.path.isdir('{}{}/{}'.format(cwd,dir_path.PROJECT_DIR.value,x.project.id)):
+            if os.path.isdir('{}{}/{}'.format(cwd,Dir_Path.PROJECT_DIR.value,x.project.id)):
                 
-                with open('{}{}/{}/project.config'.format(cwd,dir_path.PROJECT_DIR.value,x.project.id),'r+') as config:
+                with open('{}{}/{}/project.config'.format(cwd,Dir_Path.PROJECT_DIR.value,x.project.id),'r+') as config:
                     project = json.load(config)
-
+                    #Confirm project folder before starting inference
                     if(project['id'] == x.project.id):
                         pcount = pcount + 1
-                        path = '{}{}/{}'.format(cwd,dir_path.PROJECT_DIR.value,project['id'])
+                        path = '{}{}/{}'.format(cwd,Dir_Path.PROJECT_DIR.value,project['id'])
                         '''with open('{}/dataset.yaml'.format(path),'r') as f:
                             categories = {w['id']:w['name'] for w in yaml.safe_load(f.read())["categories"]}
                             print(categories)
-                        with open('{}{}classnames.py'.format(cwd,dir_path.INFER_DIR.value),'a') as fobj: 
+                        with open('{}{}classnames.py'.format(cwd,Dir_Path.INFER_DIR.value),'a') as fobj: 
                             fobj.writelines("modelmaker="+str(categories)) '''   
             
             if(pcount == 0):
                 raise HTTPException(
-                    status_code=response_code.NOT_FOUND.value, detail=response_detail.PROJECT_NOT_FOUND.value)
+                    status_code=Response_Code.NOT_FOUND.value, detail=Response_Details.PROJECT_NOT_FOUND.value)
             else:
                 if x.project.task_type == "classification":
                     model_type="image_classification"
-                    config_yaml_path = '{}{}/image_classification.yaml'.format(cwd,dir_path.CONFIG_DIR.value)
+                    config_yaml_path = '{}{}/image_classification.yaml'.format(cwd,Dir_Path.CONFIG_DIR.value)
                 if x.project.task_type == "detection":
                     model_type="object_detection"
-                    config_yaml_path = '{}{}/object_detection.yaml'.format(cwd,dir_path.CONFIG_DIR.value)
+                    config_yaml_path = '{}{}/object_detection.yaml'.format(cwd,Dir_Path.CONFIG_DIR.value)
                 with open(config_yaml_path,'r+') as f:
                     y = json.dumps(yaml.load(f,Loader=yaml.FullLoader))
                     y=json.loads(y)
                     keyCount  = int(len(y["models"]))
-                    
+                    #Parse threshold value from param.yaml file for detection models and update in config file
                     if model_type == "object_detection":
                         with open('{}/param.yaml'.format(path),'r') as fp:
                             z = json.dumps(yaml.load(fp,Loader=yaml.FullLoader))
@@ -288,11 +331,12 @@ def start_sensor_session(id,x: Model):
                             threshold = z["postprocess"]["detection_threshold"]
 
                         model = {"model{}".format(keyCount):{"model_path":"{}".format(path),"viz_threshold":threshold}}
+                    #If classification model, set topN as 1
                     if model_type == "image_classification":
                         model = {"model{}".format(keyCount):{"model_path":"{}".format(path),"topN":1}}
                     y["models"].update(model)
                     #y["flows"]["flow0"]["models"] = ['model{}'.format(keyCount)]
-                    y["flows"]["flow0"][2] = 'model{}'.format(keyCount)
+                    y["flows"]["flow0"][1] = 'model{}'.format(keyCount)
                     y["inputs"]["input0"]["source"] = dev_num
                     
                 with open(config_yaml_path,'w') as fout:
@@ -300,10 +344,11 @@ def start_sensor_session(id,x: Model):
                 
                 
                     try:
+                        #Start inference thread
                         inference_process = InferenceProcess(model_type)
                         inference_process.start()
                         process_name="app_edgeai.py"
-                        time.sleep(1.5)
+                        time.sleep(2)
                         for proc in psutil.process_iter():
                             if process_name in proc.name():
                                 pid = proc.pid
@@ -314,9 +359,13 @@ def start_sensor_session(id,x: Model):
                         x.session.ws_pid=os.getpid()
                         sensor_session = x.dict()
                         return x
-                    except:    
-                        #os.system("sed -i '/modelmaker/d' {}{}classnames.py".format(cwd,dir_path.INFER_DIR.value)) 
-                        dir_name = '{}{}'.format(cwd,dir_path.PROJECT_DIR.value)
+                    except:   
+                        """
+                        If exception occurred while starting inference do cleanup as in delete project folder 
+                        and remove model path updated in config file
+                        """
+                        #os.system("sed -i '/modelmaker/d' {}{}classnames.py".format(cwd,Dir_Path.INFER_DIR.value)) 
+                        dir_name = '{}{}'.format(cwd,Dir_Path.PROJECT_DIR.value)
                         for dir in os.listdir(dir_name):
                             path = os.path.join(dir_name, dir)
                             if len(path) != 0:
@@ -336,14 +385,19 @@ def start_sensor_session(id,x: Model):
                             yaml.safe_dump(y,fout,sort_keys=False)
         else:
             raise HTTPException(
-                status_code=response_code.CONFLICT.value, detail=response_detail.SESSION_CONFLICT.value)
+                status_code=Response_Code.CONFLICT.value, detail=Response_Details.SESSION_CONFLICT.value)
             
             
-            
-
-# POST call endpoint for initiating sensor session by starting server
-@app.post('/sensor-session',status_code=response_code.ACCEPTED.value)
+@app.post('/sensor-session',status_code=Response_Code.ACCEPTED.value)
+"""
+Initiate sensor session by starting udp node server
+"""
 def initiate_sensor_session(x: Sensor):
+    """
+    Function to initiate sensor session
+    Args:
+        x: Object of class Sensor
+    """
     global ss_id
     global sensor_session
     global cwd
@@ -356,8 +410,8 @@ def initiate_sensor_session(x: Sensor):
     pid=None
     if x.device[0].id!=(sensor[0].device[0].id):
         raise HTTPException(
-                status_code=response_code.METHOD_NOT_ALLOWED.value, detail=response_detail.INVALID_INPUT.value)
-    
+                status_code=Response_Code.METHOD_NOT_ALLOWED.value, detail=Response_Details.INVALID_INPUT.value)
+    #Check if node process is running or not
     for proc in psutil.process_iter():
         if process_name in proc.name():
             pid = proc.pid
@@ -376,48 +430,68 @@ def initiate_sensor_session(x: Sensor):
             if process_name in proc.name():
                 pid = proc.pid
                 print("newly created node",pid)
+        #Generate sensor session id
         ss_id = str(uuid.uuid4())
         session = Model(session = { "id":ss_id, "http_status":"started", "http_pid":p.pid, "udp_status":"started", "udp_pid":p.pid, "data_pipeline_status":"down","data_pipeline_pid":0},sensor = { "name":x.name, "id":x.id, "type":x.type, "device": [{"id":x.device[0].id, "type":x.device[0].type, "description":x.device[0].type, "status":x.device[0].status}]})
         sensor_session = session.dict()
         return session
     return sensor_session
 
-#GET endpoint for getting sensor session details
-@app.get('/sensor-session',status_code=response_code.OK.value)
+
+@app.get('/sensor-session',status_code=Response_Code.OK.value)
+"""
+Returns all sensor sessions including initiated and started ones.
+"""
 def get_sensor_session():
+    """
+    Function to return sensor session details
+    """
     global ss_id
     global sensor_session
     if(sensor_session==None):
          raise HTTPException(
-            status_code=response_code.NOT_FOUND.value, detail=response_detail.SESSION_NOT_FOUND.value)
+            status_code=Response_Code.NOT_FOUND.value, detail=Response_Details.SESSION_NOT_FOUND.value)
     else:
         return sensor_session
 
-#GET endpoint for getting sensor session details using id
-@app.get('/sensor-session/{id}',status_code=response_code.OK.value)
+@app.get('/sensor-session/{id}',status_code=Response_Code.OK.value)
+"""
+Returns all sensor session of specified sensor session id.
+"""
 def get_sensor_session_id(id):
+    """
+    Function to return single sensor session
+    Args:
+        id: Sensor session id parameter
+    """
     global ss_id
     global sensor_session
     if(sensor_session==None):
          raise HTTPException(
-            status_code=response_code.NOT_FOUND.value, detail=response_detail.SESSION_NOT_FOUND.value)
-    print(sensor_session["session"]["id"])
+            status_code=Response_Code.NOT_FOUND.value, detail=Response_Details.SESSION_NOT_FOUND.value)
     if(id != sensor_session["session"]["id"]):
         raise HTTPException(
-            status_code=response_code.BAD_REQUEST.value, detail=response_detail.INVALID_ID.value)
+            status_code=Response_Code.BAD_REQUEST.value, detail=Response_Details.INVALID_ID.value)
     else:
         return sensor_session
 
-#DELETE sensor session 
-@app.delete('/sensor-session/{id}',status_code=response_code.ACCEPTED.value)
+@app.delete('/sensor-session/{id}',status_code=Response_Code.ACCEPTED.value)
+"""
+Stop node udp server
+"""
 def delete_sensor_session(id):
+    """
+    Function to stop node udp server
+    Args:
+        id: Sensor session id
+    """
     global ss_id
     global sensor_session
     pid=None
     count = 0
     if(id != ss_id):
         raise HTTPException(
-            status_code=response_code.BAD_REQUEST.value, detail=response_detail.INVALID_ID.value)
+            status_code=Response_Code.BAD_REQUEST.value, detail=Response_Details.INVALID_ID.value)
     process_name="node"
     for proc in psutil.process_iter():
         if process_name in proc.name():
@@ -425,14 +499,22 @@ def delete_sensor_session(id):
             count = 1
             os.kill(pid,2)
             sensor_session=None
-            return(response_detail.ACCEPTED.value)
+            return(Response_Details.ACCEPTED.value)
     if(count == 0):
         raise HTTPException(
-            status_code=response_code.NOT_FOUND.value, detail=response_detail.NOT_FOUND.value)
+            status_code=Response_Code.NOT_FOUND.value, detail=Response_Details.NOT_FOUND.value)
 
-#DELETE datapipeline of particular session    
-@app.delete('/sensor-session/{id}/dpipe',status_code=response_code.ACCEPTED.value)
+   
+@app.delete('/sensor-session/{id}/dpipe',status_code=Response_Code.ACCEPTED.value)
+"""
+Terminate data pipeline process associated with started session
+"""
 def delete_data_pipeline(id):
+    """
+    Function to terminate data pipeline
+    Args:
+        id: Sensor session id parameter
+    """
     global rawvideo_process
     global inference_process
     global sensor_session
@@ -443,10 +525,11 @@ def delete_data_pipeline(id):
 
     if(id != ss_id):
         raise HTTPException(
-            status_code=response_code.BAD_REQUEST.value, detail=response_detail.INVALID_ID.value)
+            status_code=Response_Code.BAD_REQUEST.value, detail=Response_Details.INVALID_ID.value)
     if sensor_session["inference"] == False:
         if rawvideo_process is not None and rawvideo_process.is_alive():
             process_name="python_gst.py"
+            #Terminate/kill raw video stream pipeline using its process id
             for proc in psutil.process_iter():
                 if process_name in proc.name():
                     pid = proc.pid
@@ -455,13 +538,14 @@ def delete_data_pipeline(id):
                     sensor_session["session"]["data_pipeline_status"]="down"
                     sensor_session["session"]["data_pipeline_pid"]=0
                 
-            return(response_detail.ACCEPTED.value)
+            return(Response_Details.ACCEPTED.value)
         else:
             raise HTTPException(
-                status_code=response_code.NOT_FOUND.value, detail=response_detail.SESSION_NOT_FOUND.value)
+                status_code=Response_Code.NOT_FOUND.value, detail=Response_Details.SESSION_NOT_FOUND.value)
     else:
         if inference_process is not None and inference_process.is_alive():
             process_name="app_edgeai.py"
+            #Terminate/kill inference stream pipeline using its process id
             for proc in psutil.process_iter():
                 if process_name in proc.name():
                     pid = proc.pid
@@ -471,7 +555,8 @@ def delete_data_pipeline(id):
                     sensor_session["session"]["data_pipeline_pid"]=0
                     sensor_session["session"]["ws_status"]="down"
                     sensor_session["session"]["ws_pid"]=0
-                    #os.system("sed -i '/modelmaker/d' {}{}classnames.py".format(cwd,dir_path.INFER_DIR.value))
+                    #os.system("sed -i '/modelmaker/d' {}{}classnames.py".format(cwd,Dir_Path.INFER_DIR.value))
+                    #Remove json object for model path in config file as part of cleanup
                     with open(config_yaml_path, 'r') as fin:
                         y = json.dumps(yaml.load(fin,Loader=yaml.FullLoader))
                         y=json.loads(y) 
@@ -481,16 +566,18 @@ def delete_data_pipeline(id):
                     with open(config_yaml_path,'w') as fout:
                         yaml.safe_dump(y,fout,sort_keys=False)
                         
-                    return(response_detail.ACCEPTED.value) 
+                    return(Response_Details.ACCEPTED.value) 
         else:
 
-            #os.system("sed -i '/modelmaker/d' {}{}classnames.py".format(cwd,dir_path.INFER_DIR.value)) 
+            #os.system("sed -i '/modelmaker/d' {}{}classnames.py".format(cwd,Dir_Path.INFER_DIR.value)) 
             raise HTTPException(
-                status_code=response_code.NOT_FOUND.value, detail=response_detail.SESSION_NOT_FOUND.value)
+                status_code=Response_Code.NOT_FOUND.value, detail=Response_Details.SESSION_NOT_FOUND.value)
 
-#GET call endpoint to get sensor details
-@app.get('/sensor',status_code=response_code.OK.value) # get sensor details
-def get_sensor():   
+@app.get('/sensor',status_code=Response_Code.OK.value)
+"""
+Returns sensor details
+""" 
+def get_sensor(): 
     i = 0
     j=0
     global sensor
@@ -499,12 +586,16 @@ def get_sensor():
     if len(sensor) != 0:
         sensor.clear()
     line_count = 0
-    data = subprocess.Popen('{}{}/setup_cameras.sh'.format(cwd,dir_path.SCRIPTS_DIR.value),stdout=subprocess.PIPE,bufsize=1,universal_newlines=True,shell=True)
+    """
+    Use setup_cameras.sh sdk script to check camera connection and
+    if yes,extract video device file
+    """
+    data = subprocess.Popen('{}{}/setup_cameras.sh'.format(cwd,Dir_Path.SCRIPTS_DIR.value),stdout=subprocess.PIPE,bufsize=1,universal_newlines=True,shell=True)
     line = data.stdout.readline()
     if not line:
         print("sensor not found")
         raise HTTPException(
-            status_code=response_code.NOT_FOUND.value, detail=response_detail.SENSOR_NOT_FOUND.value)
+            status_code=Response_Code.NOT_FOUND.value, detail=Response_Details.SENSOR_NOT_FOUND.value)
     else: 
         for l in data.stdout:
             output = l.rstrip()
@@ -512,8 +603,10 @@ def get_sensor():
             if(line_count == 1):
                 break
         parts = output.split(' ')
+        #Extracted video device file name copied to dev_num variable
         dev_num = (parts[6])
         dev_no = dev_num.replace('/dev/','')
+        #Extract sensor name
         usb_name = subprocess.Popen('cat /sys/class/video4linux/{}/name'.format(dev_no),stdout=subprocess.PIPE,bufsize=1,universal_newlines=True,shell=True)
         usb_name = usb_name.communicate()[0]
         if len(usb_name) == 0:
@@ -527,24 +620,41 @@ def get_sensor():
         sensor.append(Sensor(name = name,id = "null", type = sensor_type, device = [DeviceItem(id = dev_num,type = device_type, description = description, status = status)]))
         return sensor
 
-#POST call endpoint to create project
-@app.post('/project',status_code=response_code.CREATED.value)
+@app.post('/project',status_code=Response_Code.CREATED.value)
+"""
+Sets up a project entry with all the parameters supplied
+"""
 def post_project(x: Project):
+    """
+    Create project folder and add Project class object 
+    sent as part of request body in project config file 
+    Args:
+        x: Project class object
+    """
     global cwd
     project = x.dict()
-    dir_name = '{}{}'.format(cwd,dir_path.PROJECT_DIR.value)
+    dir_name = '{}{}'.format(cwd,Dir_Path.PROJECT_DIR.value)
     for dir in os.listdir(dir_name):
         path = os.path.join(dir_name, dir)
         if len(path) != 0:
             os.system('rm -r {}'.format(path))
-    os.system('mkdir {}{}/{}'.format(cwd,dir_path.PROJECT_DIR.value,x.id))    
-    with open("{}{}/{}/project.config".format(cwd,dir_path.PROJECT_DIR.value,x.id), "w") as outfile:
+    os.system('mkdir {}{}/{}'.format(cwd,Dir_Path.PROJECT_DIR.value,x.id))    
+    with open("{}{}/{}/project.config".format(cwd,Dir_Path.PROJECT_DIR.value,x.id), "w") as outfile:
         json.dump(project, outfile)
-        return(response_detail.CREATED.value)
+        return(Response_Details.CREATED.value)
 
-#POST call endpoint to upload model
-@app.post('/project/{id}/model',status_code=response_code.CREATED.value)
+@app.post('/project/{id}/model',status_code=Response_Code.CREATED.value)
+"""
+Uploads model and artifacts for inference to the project
+"""
 async def upload_model(id,file: UploadFile = File(...)):
+    """
+    Function to upload model
+    Args:
+        id: Project id parameter
+        file: actual Python file that you can pass directly to other functions 
+              or libraries that expect a "file-like" object
+    """
     global cwd
     try:
         print("FILE:",file)
@@ -554,51 +664,55 @@ async def upload_model(id,file: UploadFile = File(...)):
         print('filesize is',filesize)
 
         filepath = os.path.join('./', os.path.basename('outputFile.tar.gz'))
+        #Use aiofiles package to write base 64 file
         async with aiofiles.open(filepath, 'wb') as f:
             await f.write(filecontent)
         count = 0
         
-        if os.path.isdir('{}{}/{}'.format(cwd,dir_path.PROJECT_DIR.value,id)):
+        if os.path.isdir('{}{}/{}'.format(cwd,Dir_Path.PROJECT_DIR.value,id)):
             
-            with open('{}{}/{}/project.config'.format(cwd,dir_path.PROJECT_DIR.value,id),'r+') as config:
+            with open('{}{}/{}/project.config'.format(cwd,Dir_Path.PROJECT_DIR.value,id),'r+') as config:
                 project = json.load(config)
                 if(project['id'] == id):
                     count = count + 1
                     name = project['name']
                     tar = tarfile.open('{}outputFile.tar.gz'.format(cwd))
-                    tar.extractall('{}{}/{}'.format(cwd,dir_path.PROJECT_DIR.value,project['id']))
+                    tar.extractall('{}{}/{}'.format(cwd,Dir_Path.PROJECT_DIR.value,project['id']))
                     print('EXTRACTED') 
                     os.remove('{}outputFile.tar.gz'.format(cwd))
 
-                    with open('{}{}/{}/param.yaml'.format(cwd,dir_path.PROJECT_DIR.value,project['id']),'r+') as f:
+                    with open('{}{}/{}/param.yaml'.format(cwd,Dir_Path.PROJECT_DIR.value,project['id']),'r+') as f:
                         model_param = json.dumps(yaml.load(f,Loader=yaml.FullLoader))
                         y=json.loads(model_param)
                         model_path = y['session']['model_path']
                         
-                    path = '{}{}/{}/{}'.format(cwd,dir_path.PROJECT_DIR.value,project['id'],model_path)
+                    path = '{}{}/{}/{}'.format(cwd,Dir_Path.PROJECT_DIR.value,project['id'],model_path)
                     model_checksum = hashlib.md5(open(path,'rb').read()).hexdigest()
                     project['model_file_checksum']=model_checksum
                     project['model_file']=model_path
+                    #Update project config file
                     config.seek(0)
                     json.dump(project,config)
                     config.truncate()
     except Exception as e:
         print("Error in uploading model to EVM whose exception is",e)
         raise HTTPException(
-            status_code=response_code.METHOD_NOT_ALLOWED.value, detail=response_detail.INVALID_INPUT.value)           
+            status_code=Response_Code.METHOD_NOT_ALLOWED.value, detail=Response_Details.INVALID_INPUT.value)           
     if(count == 0):
         raise HTTPException(
-            status_code=response_code.NOT_FOUND.value, detail=response_detail.PROJECT_NOT_FOUND.value)
+            status_code=Response_Code.NOT_FOUND.value, detail=Response_Details.PROJECT_NOT_FOUND.value)
     else:
-        return(response_detail.CREATED.value,project['id'])
+        return(Response_Details.CREATED.value,project['id'])
 
-#GET call endpoint to get project details
-@app.get('/project')
+@app.get('/project',status_code=Response_Code.OK.value)
+"""
+Returns project details
+"""
 def get_projects():
     project_list = []
     count = 0
-    for path in glob.iglob('{}{}/**'.format(cwd,dir_path.PROJECT_DIR.value),recursive=True):
-        if os.path.isfile(path): # filter dirs
+    for path in glob.iglob('{}{}/**'.format(cwd,Dir_Path.PROJECT_DIR.value),recursive=True):
+        if os.path.isfile(path): 
             try:
                 with open(path,'r+') as config:
                     project = json.load(config)
@@ -608,50 +722,67 @@ def get_projects():
                 continue
     if(count == 0):
         raise HTTPException(
-            status_code=response_code.NOT_FOUND.value, detail=response_detail.PROJECT_NOT_FOUND.value)
+            status_code=Response_Code.NOT_FOUND.value, detail=Response_Details.PROJECT_NOT_FOUND.value)
     else:
         return(project_list)
 
-
- #GET call endpoint to get project details
-@app.get('/project/{id}',status_code=response_code.OK.value)
+@app.get('/project/{id}',status_code=Response_Code.OK.value)
+"""
+Returns project details using the id.
+"""
 def get_project_id(id):
+    """
+    Function to return project details 
+    Args:
+        id: Project id parameter
+    """
     count = 0
     global cwd
     
-    if os.path.isdir('{}{}/{}'.format(cwd,dir_path.PROJECT_DIR.value,id)): # filter dirs
-            with open('{}{}/{}/project.config'.format(cwd,dir_path.PROJECT_DIR.value,id),'r+') as config:
+    if os.path.isdir('{}{}/{}'.format(cwd,Dir_Path.PROJECT_DIR.value,id)): # filter dirs
+            with open('{}{}/{}/project.config'.format(cwd,Dir_Path.PROJECT_DIR.value,id),'r+') as config:
                 project = json.load(config)
                 if(project['id'] == id):
                     count = count + 1
     if(count == 0):
         raise HTTPException(
-            status_code=response_code.NOT_FOUND.value, detail=response_detail.PROJECT_NOT_FOUND.value)
+            status_code=Response_Code.NOT_FOUND.value, detail=Response_Details.PROJECT_NOT_FOUND.value)
     else:
         return(project)
 
-#DELETE call endpoint to delete project
-@app.delete('/project/{id}',status_code=response_code.OK.value)
+@app.delete('/project/{id}',status_code=Response_Code.OK.value)
+"""
+All resources associated to the project will be cleared and freed
+"""
 def delete_project(id):
+    """
+    Function to delete project folder
+    Args:
+        id: Project ID parameter
+    """
     count = 0
     global cwd
     
-    if os.path.isdir('{}{}/{}'.format(cwd,dir_path.PROJECT_DIR.value,id)): # filter dirs
-        with open('{}{}/{}/project.config'.format(cwd,dir_path.PROJECT_DIR.value,id),'r+') as config:
+    if os.path.isdir('{}{}/{}'.format(cwd,Dir_Path.PROJECT_DIR.value,id)): # filter dirs
+        with open('{}{}/{}/project.config'.format(cwd,Dir_Path.PROJECT_DIR.value,id),'r+') as config:
             project = json.load(config)
             if(project['id'] == id):
-                os.system('rm -r {}{}/{}'.format(cwd,dir_path.PROJECT_DIR.value,project['id']))
+                os.system('rm -r {}{}/{}'.format(cwd,Dir_Path.PROJECT_DIR.value,project['id']))
                 count = count + 1
     
     if(count == 0):
         raise HTTPException(
-            status_code=response_code.NOT_FOUND.value, detail=response_detail.PROJECT_NOT_FOUND.value)
+            status_code=Response_Code.NOT_FOUND.value, detail=Response_Details.PROJECT_NOT_FOUND.value)
     else:
-        return(response_detail.SUCCESS.value)
+        return(Response_Details.SUCCESS.value)
 
 #MAIN FUNCTION
 if __name__ == "__main__":
-
+    """
+    Main function which runs the uvicorn server
+    Check if any node process running if yes, kill them
+    Check if projects folder is created, if no create folder.
+    """
     process_name = 'node'
     for proc in psutil.process_iter():                                                                           
         if process_name in proc.name():                                                                                                                
@@ -659,10 +790,10 @@ if __name__ == "__main__":
             print(pid)                                                                                                                        
             os.system('kill -1 {}'.format(pid)) 
     os.system('killall node')
-    if not os.path.isdir('{}{}'.format(cwd,dir_path.PROJECT_DIR.value)):
-        os.system('mkdir {}{}'.format(cwd,dir_path.PROJECT_DIR.value)) 
-    '''os.system("sed -i '/modelmaker/d' {}{}classnames.py".format(cwd,dir_path.INFER_DIR.value))
-    config_yaml_path = ['{}{}/image_classification.yaml'.format(cwd,dir_path.CONFIG_DIR.value),'{}{}/object_detection.yaml'.format(cwd,dir_path.CONFIG_DIR.value)]
+    if not os.path.isdir('{}{}'.format(cwd,Dir_Path.PROJECT_DIR.value)):
+        os.system('mkdir {}{}'.format(cwd,Dir_Path.PROJECT_DIR.value)) 
+    '''os.system("sed -i '/modelmaker/d' {}{}classnames.py".format(cwd,Dir_Path.INFER_DIR.value))
+    config_yaml_path = ['{}{}/image_classification.yaml'.format(cwd,Dir_Path.CONFIG_DIR.value),'{}{}/object_detection.yaml'.format(cwd,Dir_Path.CONFIG_DIR.value)]
     for path in config_yaml_path:
         count = 0
         with open(path, 'r') as f:

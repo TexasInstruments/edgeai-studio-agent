@@ -31,17 +31,18 @@
 
 import gi
 import signal
-gi.require_version('Gst', '1.0')
+
+gi.require_version("Gst", "1.0")
 from gi.repository import Gst, GObject, GLib
 import json
 import sys
 
+
 def on_message(bus: Gst.Bus, message: Gst.Message, loop: GLib.MainLoop):
+    """
+    Gstreamer Message Types and parsing
+    """
     mtype = message.type
-    """
-        Gstreamer Message Types and how to parse
-        https://lazka.github.io/pgi-docs/Gst-1.0/flags.html#Gst.MessageType
-    """
     if mtype == Gst.MessageType.EOS:
         print("End of stream")
         loop.quit()
@@ -57,10 +58,17 @@ def on_message(bus: Gst.Bus, message: Gst.Message, loop: GLib.MainLoop):
 
     return True
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
+    """
+    Function to run gstreamer pipeline for raw video stream
+    """
     Gst.init()
-    print("before playing")
-    p = Gst.parse_launch(' v4l2src device={} ! videoconvert ! video/x-raw, width={}, height={}, framerate=30/1, format=NV12 ! v4l2h264enc bitrate=1000000 gop-size=30 ! h264parse ! mp4mux fragment-duration=1 ! udpsink host=127.0.0.1  port=8081'.format(sys.argv[1],sys.argv[2],sys.argv[3]))
+    p = Gst.parse_launch(
+        " v4l2src device={} ! videoconvert ! video/x-raw, width={}, height={}, framerate=30/1, format=NV12 ! v4l2h264enc bitrate=1000000 gop-size=30 ! h264parse ! mp4mux fragment-duration=1 ! udpsink host=127.0.0.1  port=8081".format(
+            sys.argv[1], sys.argv[2], sys.argv[3]
+        )
+    )
     bus = p.get_bus()
     # allow bus to emit messages to main thread
     bus.add_signal_watch()

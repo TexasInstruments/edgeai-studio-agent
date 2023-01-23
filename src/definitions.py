@@ -29,17 +29,27 @@
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from enum import Enum
- 
-class response_code(Enum):
+
+
+class Response_Code(Enum):
+    """
+    Class to store http response codes
+    """
+
     OK = 200
     CREATED = 201
     ACCEPTED = 202
     BAD_REQUEST = 400
     NOT_FOUND = 404
     METHOD_NOT_ALLOWED = 405
-    CONFLICT= 409
+    CONFLICT = 409
 
-class response_detail(Enum):
+
+class Response_Details(Enum):
+    """
+    Class to store http response messages
+    """
+
     SUCCESS = "Successful operation"
     CREATED = "Succesfully created"
     ACCEPTED = "Operation accepted"
@@ -51,10 +61,15 @@ class response_detail(Enum):
     PROJECT_CONFLICT = "Project already exists"
     SESSION_CONFLICT = "Sensor session alreday running"
 
-class server_details(Enum):
+
+class Server_Details(Enum):
+    """
+    Class to store server details
+    """
+
     HTTP_PORT = 8080
-    HTTP_URL = "/stream"
-    WS_PORT = 0
+    HTTP_URL = "/raw_videostream"
+    WS_PORT = 8000
     WS_URL = ""
     UDP_SERVER_PORT = 8081
     UDP_CLIENT_PORT = 0
@@ -63,13 +78,14 @@ class server_details(Enum):
     TCP_STATUS = "Down"
     TCP_PID = 0
 
-class dir_path(Enum):
-    PROJECT_DIR = '/../../projects'
-    CONFIG_DIR = '/../../edge_ai_apps/configs'
-    CONFIG_DIR_FOR_SETUP = '/../edge_ai_apps/configs'
-    SCRIPTS_DIR = '/../../edge_ai_apps/scripts'
-    INFER_DIR = '/../../edge_ai_apps/apps_python'
 
-    
+class Dir_Path(Enum):
+    """
+    Class to store folder paths
+    """
 
-  
+    PROJECT_DIR = "/../../projects"
+    CONFIG_DIR = "/../../edge_ai_apps/configs"
+    CONFIG_DIR_FOR_SETUP = "/../edge_ai_apps/configs"
+    SCRIPTS_DIR = "/../../edge_ai_apps/scripts"
+    INFER_DIR = "/../../edge_ai_apps/apps_python"
