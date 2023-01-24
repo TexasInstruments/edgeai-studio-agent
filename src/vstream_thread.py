@@ -30,7 +30,7 @@
 
 from multiprocessing import Process
 from websocket import create_connection
-from definitions import dir_path
+from definitions import Dir_Path
 import time
 import os
 import psutil
@@ -58,11 +58,9 @@ def run_loop(config, name=""):
         ws3 = create_connection("ws://localhost:8000/ws/1/usbcam_status")
         time.sleep(0.5)
         process = subprocess.Popen(
-            "{}{}/app_edgeai.py {}{}/{}.yaml".format(
+            "{}{}/app_edgeai.py ../infer_config/{}.yaml".format(
                 cwd,
-                dir_path.INFER_DIR.value,
-                cwd,
-                dir_path.CONFIG_DIR.value,
+                Dir_Path.INFER_DIR.value,
                 model_config,
             ),
             stdout=subprocess.PIPE,
@@ -112,7 +110,7 @@ def run_loop(config, name=""):
 
             # Below subprocess is run to check usb cam's availability during streaming
             data = subprocess.Popen(
-                "{}{}/setup_cameras.sh".format(cwd, dir_path.SCRIPTS_DIR.value),
+                "{}{}/setup_cameras.sh".format(cwd, Dir_Path.SCRIPTS_DIR.value),
                 stdout=subprocess.PIPE,
                 bufsize=1,
                 universal_newlines=True,
@@ -141,7 +139,7 @@ def run_loop(config, name=""):
 
         while True:
             data = subprocess.Popen(
-                "{}{}/setup_cameras.sh".format(cwd, dir_path.SCRIPTS_DIR.value),
+                "{}{}/setup_cameras.sh".format(cwd, Dir_Path.SCRIPTS_DIR.value),
                 stdout=subprocess.PIPE,
                 bufsize=1,
                 universal_newlines=True,

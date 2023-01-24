@@ -337,14 +337,10 @@ def start_sensor_session(id, x: Model):
             else:
                 if x.project.task_type == "classification":
                     model_type = "image_classification"
-                    config_yaml_path = "{}{}/image_classification.yaml".format(
-                        cwd, Dir_Path.CONFIG_DIR.value
-                    )
+                    config_yaml_path = "../infer_config/image_classification.yaml"
                 if x.project.task_type == "detection":
                     model_type = "object_detection"
-                    config_yaml_path = "{}{}/object_detection.yaml".format(
-                        cwd, Dir_Path.CONFIG_DIR.value
-                    )
+                    config_yaml_path = "../infer_config/object_detection.yaml"
                 with open(config_yaml_path, "r+") as f:
                     y = json.dumps(yaml.load(f, Loader=yaml.FullLoader))
                     y = json.loads(y)
@@ -777,12 +773,12 @@ async def upload_model(id, file: UploadFile = File(...)):
                 if project["id"] == id:
                     count = count + 1
                     name = project["name"]
-                    tar = tarfile.open("{}outputFile.tar.gz".format(cwd))
+                    tar = tarfile.open("{}/outputFile.tar.gz".format(cwd))
                     tar.extractall(
                         "{}{}/{}".format(cwd, Dir_Path.PROJECT_DIR.value, project["id"])
                     )
                     print("EXTRACTED")
-                    os.remove("{}outputFile.tar.gz".format(cwd))
+                    os.remove("{}/outputFile.tar.gz".format(cwd))
 
                     with open(
                         "{}{}/{}/param.yaml".format(
