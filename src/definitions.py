@@ -85,7 +85,5 @@ class Dir_Path(Enum):
     """
 
     PROJECT_DIR = "/../../projects"
-    CONFIG_DIR = "/../../edge_ai_apps/configs"
-    CONFIG_DIR_FOR_SETUP = "/../edge_ai_apps/configs"
     SCRIPTS_DIR = "/../../edge_ai_apps/scripts"
     INFER_DIR = "/../../edge_ai_apps/apps_python"
