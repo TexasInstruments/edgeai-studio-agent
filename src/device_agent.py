@@ -337,10 +337,10 @@ def start_sensor_session(id, x: Model):
             else:
                 if x.project.task_type == "classification":
                     model_type = "image_classification"
-                    config_yaml_path = "../infer_config/image_classification.yaml"
+                    config_yaml_path = "../config/image_classification.yaml"
                 if x.project.task_type == "detection":
                     model_type = "object_detection"
-                    config_yaml_path = "../infer_config/object_detection.yaml"
+                    config_yaml_path = "../config/object_detection.yaml"
                 with open(config_yaml_path, "r+") as f:
                     y = json.dumps(yaml.load(f, Loader=yaml.FullLoader))
                     y = json.loads(y)

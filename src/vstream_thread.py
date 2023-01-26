@@ -58,7 +58,7 @@ def run_loop(config, name=""):
         ws3 = create_connection("ws://localhost:8000/ws/1/usbcam_status")
         time.sleep(0.5)
         process = subprocess.Popen(
-            "{}{}/app_edgeai.py ../infer_config/{}.yaml".format(
+            "{}{}/app_edgeai.py ../config/{}.yaml".format(
                 cwd,
                 Dir_Path.INFER_DIR.value,
                 model_config,
