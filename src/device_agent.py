@@ -323,11 +323,6 @@ def start_sensor_session(id, x: Model):
                         path = "{}{}/{}".format(
                             cwd, Dir_Path.PROJECT_DIR.value, project["id"]
                         )
-                        """with open('{}/dataset.yaml'.format(path),'r') as f:
-                            categories = {w['id']:w['name'] for w in yaml.safe_load(f.read())["categories"]}
-                            print(categories)
-                        with open('{}{}classnames.py'.format(cwd,Dir_Path.INFER_DIR.value),'a') as fobj: 
-                            fobj.writelines("modelmaker="+str(categories)) """
 
             if pcount == 0:
                 raise HTTPException(
@@ -367,7 +362,6 @@ def start_sensor_session(id, x: Model):
                             }
                         }
                     y["models"].update(model)
-                    # y["flows"]["flow0"]["models"] = ['model{}'.format(keyCount)]
                     y["flows"]["flow0"][1] = "model{}".format(keyCount)
                     y["inputs"]["input0"]["source"] = dev_num
 
@@ -395,7 +389,6 @@ def start_sensor_session(id, x: Model):
                         If exception occurred while starting inference do cleanup as in delete project folder
                         and remove model path updated in config file
                         """
-                        # os.system("sed -i '/modelmaker/d' {}{}classnames.py".format(cwd,Dir_Path.INFER_DIR.value))
                         dir_name = "{}{}".format(cwd, Dir_Path.PROJECT_DIR.value)
                         for dir in os.listdir(dir_name):
                             path = os.path.join(dir_name, dir)
@@ -620,7 +613,6 @@ def delete_data_pipeline(id):
                     sensor_session["session"]["data_pipeline_pid"] = 0
                     sensor_session["session"]["ws_status"] = "down"
                     sensor_session["session"]["ws_pid"] = 0
-                    # os.system("sed -i '/modelmaker/d' {}{}classnames.py".format(cwd,Dir_Path.INFER_DIR.value))
                     # Remove json object for model path in config file as part of cleanup
                     with open(config_yaml_path, "r") as fin:
                         y = json.dumps(yaml.load(fin, Loader=yaml.FullLoader))
@@ -634,7 +626,6 @@ def delete_data_pipeline(id):
                     return Response_Details.ACCEPTED.value
         else:
 
-            # os.system("sed -i '/modelmaker/d' {}{}classnames.py".format(cwd,Dir_Path.INFER_DIR.value))
             raise HTTPException(
                 status_code=Response_Code.NOT_FOUND.value,
                 detail=Response_Details.SESSION_NOT_FOUND.value,
@@ -909,7 +900,7 @@ if __name__ == "__main__":
     """
     Main function which runs the uvicorn server
     Check if any node process running if yes, kill them
-    Check if projects folder is created, if no create folder.
+    Check if projects folder for stroing model is created, if no create folder.
     """
     process_name = "node"
     for proc in psutil.process_iter():
@@ -918,34 +909,8 @@ if __name__ == "__main__":
             print(pid)
             os.system("kill -1 {}".format(pid))
     os.system("killall node")
-    if not os.path.isdir("{}{}".format(cwd, Dir_Path.PROJECT_DIR.value)):
-        os.system("mkdir {}{}".format(cwd, Dir_Path.PROJECT_DIR.value))
-    """os.system("sed -i '/modelmaker/d' {}{}classnames.py".format(cwd,Dir_Path.INFER_DIR.value))
-    config_yaml_path = ['{}{}/image_classification.yaml'.format(cwd,Dir_Path.CONFIG_DIR.value),'{}{}/object_detection.yaml'.format(cwd,Dir_Path.CONFIG_DIR.value)]
-    for path in config_yaml_path:
-        count = 0
-        with open(path, 'r') as f:
-            for index, line in enumerate(f):
-                if 'udpsink' in line:
-                    count = count + 1
-        if count == 0:
-            
-            with open(path,'r+') as f:
-                y = json.dumps(yaml.load(f,Loader=yaml.FullLoader))
-                y=json.loads(y)
-                keyCount  = int(len(y["outputs"]))
-                
-                sink = {"output{}".format(keyCount):{"sink":"udpsink host=127.0.0.1 port=8081","width":1280,"height":720}}
-                y["outputs"].update(sink)
-                y["flows"]["flow0"]["outputs"] = ['output{}'.format(keyCount)]
-                input = {"input0":{"source":"/dev/video2","format":"jpeg","width":640,"height":360,"framerate":30}}
-                y["inputs"].update(input)
-                y["flows"]["flow0"]["input"] = "input0"
-                y["flows"]["flow0"]["mosaic"]["mosaic0"]["width"] = 640
-                y["flows"]["flow0"]["mosaic"]["mosaic0"]["height"] = 360
-                
-            with open(path,'w') as fout:
-                yaml.safe_dump(y,fout,sort_keys=False)"""
+    # if not os.path.isdir("{}{}".format(cwd, Dir_Path.PROJECT_DIR.value)):
+    # os.system("mkdir {}{}".format(cwd, Dir_Path.PROJECT_DIR.value))
 
     uvicorn.run(
         "device_agent:app",
