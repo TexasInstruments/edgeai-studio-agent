@@ -56,7 +56,7 @@ outputs:
 flows:
   flow0:
   - input0
-  - model3
+  - model1
   - output3
   - - 320
     - 180
