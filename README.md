@@ -49,6 +49,10 @@ cd /opt/ti-edgeai-studio-evm-agent-main/
 ```
 ./requirements.sh
 ```
+6.Run the following command to apply patch on gst_wrapper.py sdk file to set bitrate
+```
+patch /opt/edge_ai_apps/apps_python/gst_wrapper.py /opt/ti-edgeai-studio-evm-agent-main/gst_wrapper_patch.txt
+```
 6. Go to src folder using CMD: 
 ```
 cd /opt/ti-edgeai-studio-evm-agent-main/src 
