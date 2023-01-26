@@ -45,17 +45,9 @@ tar –xvf /opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent-main.tar.gz
 ```
 cd /opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent-main/ 
 ```
-5. Run the following script for setting up the config.(one time execution)
+5. Run the following script for installing packages.
 ```
-python3 setup.py
-```
-6. Go to scripts folder using CMD: 
-```
-cd /opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent-main/scripts
-```
-7. Run the following bash scriptto apply patch on sdk files to enable inference:
-```
-./run_patch.sh
+./requirements.sh
 ```
 8. Go to src folder using CMD: 
 ```
