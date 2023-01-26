@@ -49,11 +49,11 @@ cd /opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent-main/
 ```
 ./requirements.sh
 ```
-8. Go to src folder using CMD: 
+6. Go to src folder using CMD: 
 ```
 cd /opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent-main/src 
 ```
-9. Execute device agent script using CMD: 
+7. Execute device agent script using CMD: 
 ```
 python3 device_agent.py  
 ```
