@@ -33,17 +33,17 @@ ssh root@ip-address
 
 1. Download the evm agent repo tar file from gitlab into your pc from this link: (https://gitlab.ignitarium.in/ti-edgeai_studio/ti-edgeai-studio-evm-agent)
 
-(Note: If a clone of above repo can be done on target EVM this will be the recommended option since changes we make can easily be updated. If cloning skip steps 2 and 3 , always clone repo into /opt/edge_ai_apps/apps_python/ on target and **if cloning replace ti-edgeai-studio-evm-agent-main with ti-edgeai-studio-evm-agent in the upcoming commands and inside run_patch.sh script** ) 
+(Note: If a clone of above repo can be done on target EVM this will be the recommended option since changes we make can easily be updated. If cloning skip steps 2 and 3 , always clone repo into /opt/ on target and **if cloning replace ti-edgeai-studio-evm-agent-main with ti-edgeai-studio-evm-agent in the upcoming commands ** ) 
 
-2. Transfer above .tar into target to this location  /opt/edge_ai_apps/apps_python/ 
+2. Transfer above .tar into target to this location  /opt/
 
-3. Extract the file in device using command(Note: Extract to /opt/edge_ai_apps/apps_python/ location) :  
+3. Extract the file in device using command(Note: Extract to /opt/ location) :  
 ```
-tar –xvf /opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent-main.tar.gz   
+tar –xvf /opt/ti-edgeai-studio-evm-agent-main.tar.gz   
 ```
 4. Navigate to the folder using CMD:
 ```
-cd /opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent-main/ 
+cd /opt/ti-edgeai-studio-evm-agent-main/ 
 ```
 5. Run the following script for installing packages.
 ```
@@ -51,10 +51,10 @@ cd /opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent-main/
 ```
 6. Go to src folder using CMD: 
 ```
-cd /opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent-main/src 
+cd /opt/ti-edgeai-studio-evm-agent-main/src 
 ```
 7. Execute device agent script using CMD: 
 ```
 python3 device_agent.py  
 ```
-- Note: Ensure you are inside folder /opt/edge_ai_apps/apps_python/ti-edgeai-studio-evm-agent-main/src before running device_agent.py
+- Note: Ensure you are inside folder /opt/ti-edgeai-studio-evm-agent-main/src before running device_agent.py
