@@ -287,7 +287,7 @@ def start_sensor_session(id, x: Model):
         if rawvideo_process is None or not rawvideo_process.is_alive():
 
             try:
-                # Start raw video stream thread with parameter to indicate device device file name
+                # Start raw video stream thread with parameter to indicate device file name
                 rawvideo_process = RawvideoProcess(dev_num)
                 rawvideo_process.start()
                 process_name = "python_gst.py"
@@ -319,7 +319,7 @@ def start_sensor_session(id, x: Model):
         if inference_process is None or not inference_process.is_alive():
             print("inside inference")
             pcount = 0
-            # check project folder of specified id exists
+            # check if project folder of specified id exists
             if os.path.isdir(
                 "{}{}/{}".format(cwd, Dir_Path.PROJECT_DIR.value, x.project.id)
             ):
@@ -740,7 +740,7 @@ def get_sensor():
 def post_project(x: Project):
     """
     Create project folder and add Project class object
-    sent as part of request body in project config file
+    in project.config file sent as part of request body
     Args:
         x: Project class object
     """
@@ -932,7 +932,7 @@ if __name__ == "__main__":
     """
     Main function which runs the uvicorn server
     Check if any node process running if yes, kill them
-    Check if projects folder for stroing model is created, if no create folder.
+    Check if projects folder for storing model is created, if no create folder.
     """
     process_name = "node"
     # To kill any node process beforehand using pid so as to not affect the udp server initiation
