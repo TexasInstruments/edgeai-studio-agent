@@ -751,7 +751,6 @@ def post_project(x: Project):
     for dir in os.listdir(dir_name):
         path = os.path.join(dir_name, dir)
         if len(path) != 0:
-            if os.path.isdir("{}{}/{}".format(cwd, Dir_Path.PROJECT_DIR.value, id)):
                 os.system("rm -r {}".format(path))
     os.system("mkdir {}{}/{}".format(cwd, Dir_Path.PROJECT_DIR.value, x.id))
     with open(
