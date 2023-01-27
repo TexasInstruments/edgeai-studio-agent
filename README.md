@@ -1,5 +1,5 @@
 # TI Edgeai Studio Evm Agent(for 8.5 sdk)
-DEPENDENCIES: 8.5 version sdk, TIDL tools version 8.5 used in ml-backend side
+DEPENDENCIES: 8.5 version sdk for TDA4VM, TIDL tools version 8.5 used in ml-backend side
 
 
 ## A) FETCHING IP ADDRESS OF DEVICE VIA UART TERMINAL FROM HOST SIDE
