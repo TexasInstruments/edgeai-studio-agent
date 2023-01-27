@@ -199,6 +199,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: int):
             and broadcast to GUI
             """
             data = await websocket.receive_text()
+            # Apply regex to remove non readable characters
             text = re.sub(r"(\x9B|\x1B[\[\(\=])[0-?]*[ -\/]*([@-~]|$)", "", data)
             await manager1.broadcast_log(text)
     except Exception as e:
@@ -255,6 +256,7 @@ def start_sensor_session(id, x: Model):
     process_name = "node"
     count = 0
     model_type = None
+    # check if node process running or not
     for proc in psutil.process_iter():
         if process_name in proc.name():
             pid = proc.pid
@@ -265,17 +267,19 @@ def start_sensor_session(id, x: Model):
             status_code=Response_Code.NOT_FOUND.value,
             detail=Response_Details.SESSION_NOT_FOUND.value,
         )
+    # check the sensor session id with the id sent from ui
     if id != ss_id:
         raise HTTPException(
             status_code=Response_Code.BAD_REQUEST.value,
             detail=Response_Details.INVALID_ID.value,
         )
+    # check if inference or raw stream to be started
     if x.inference == False:
-
+        # check if raw thread is running; if no start
         if rawvideo_process is None or not rawvideo_process.is_alive():
 
             try:
-                # Start raw video stream thread
+                # Start raw video stream thread with parameter to indicate device device file name
                 rawvideo_process = RawvideoProcess(dev_num)
                 rawvideo_process.start()
                 process_name = "python_gst.py"
@@ -303,9 +307,11 @@ def start_sensor_session(id, x: Model):
             )
 
     else:
+        # check if inference thread is running
         if inference_process is None or not inference_process.is_alive():
             print("inside inference")
             pcount = 0
+            # check project folder of specified id exists
             if os.path.isdir(
                 "{}{}/{}".format(cwd, Dir_Path.PROJECT_DIR.value, x.project.id)
             ):
@@ -317,7 +323,7 @@ def start_sensor_session(id, x: Model):
                     "r+",
                 ) as config:
                     project = json.load(config)
-                    # Confirm project folder before starting inference
+                    # check project id in project.config file is same, if yes update pcount
                     if project["id"] == x.project.id:
                         pcount = pcount + 1
                         path = "{}{}/{}".format(
@@ -330,6 +336,10 @@ def start_sensor_session(id, x: Model):
                     detail=Response_Details.PROJECT_NOT_FOUND.value,
                 )
             else:
+                """
+                check the type of inference and set the config file paths and model_type
+                variable to be sent as parameter when calling inference thread
+                """
                 if x.project.task_type == "classification":
                     model_type = "image_classification"
                     config_yaml_path = "../config/image_classification.yaml"
@@ -369,11 +379,12 @@ def start_sensor_session(id, x: Model):
                     yaml.safe_dump(y, fout, sort_keys=False)
 
                     try:
-                        # Start inference thread
+                        # Start inference thread with the parameter to indicate type of inference
                         inference_process = InferenceProcess(model_type)
                         inference_process.start()
                         process_name = "app_edgeai.py"
                         time.sleep(2)
+                        # get the pid for inference
                         for proc in psutil.process_iter():
                             if process_name in proc.name():
                                 pid = proc.pid
@@ -436,12 +447,13 @@ def initiate_sensor_session(x: Sensor):
             status_code=Response_Code.METHOD_NOT_ALLOWED.value,
             detail=Response_Details.INVALID_INPUT.value,
         )
-    # Check if node process is running or not
+    # Check if node process is running or not and update count variable
     for proc in psutil.process_iter():
         if process_name in proc.name():
             pid = proc.pid
             count = 1
             break
+    # if count is 0 then start server
     if count != 1:
         print("starting server")
         p = subprocess.Popen(
@@ -451,12 +463,14 @@ def initiate_sensor_session(x: Sensor):
             universal_newlines=True,
             shell=True,
         )
+        # pipe stdout terminal log (server initiation)
         for line in p.stdout:
             output = line.rstrip()
             print(output)
             line_count = line_count + 1
             if line_count == 2:
                 break
+        # get pid of current node process
         for proc in psutil.process_iter():
             if process_name in proc.name():
                 pid = proc.pid
@@ -499,6 +513,7 @@ def get_sensor_session():
     """
     global ss_id
     global sensor_session
+    # check if sensor session variable used for storing session details is empty
     if sensor_session == None:
         raise HTTPException(
             status_code=Response_Code.NOT_FOUND.value,
@@ -542,12 +557,14 @@ def delete_sensor_session(id):
     global sensor_session
     pid = None
     count = 0
+    # Check parameter id and current session id(ss_id) is same before deleting session
     if id != ss_id:
         raise HTTPException(
             status_code=Response_Code.BAD_REQUEST.value,
             detail=Response_Details.INVALID_ID.value,
         )
     process_name = "node"
+    # Terminate/kill node server using its process id
     for proc in psutil.process_iter():
         if process_name in proc.name():
             pid = proc.pid
@@ -576,13 +593,15 @@ def delete_data_pipeline(id):
     global keyCount
     global config_yaml_path
     pid = None
-
+    # Check parameter id and current session id(ss_id) is same before deleting pipeline
     if id != ss_id:
         raise HTTPException(
             status_code=Response_Code.BAD_REQUEST.value,
             detail=Response_Details.INVALID_ID.value,
         )
+    # Check if raw video or inference video to be deleted
     if sensor_session["inference"] == False:
+        # check if raw stream thread is running
         if rawvideo_process is not None and rawvideo_process.is_alive():
             process_name = "python_gst.py"
             # Terminate/kill raw video stream pipeline using its process id
@@ -601,6 +620,7 @@ def delete_data_pipeline(id):
                 detail=Response_Details.SESSION_NOT_FOUND.value,
             )
     else:
+        # check if inference stream thread is running
         if inference_process is not None and inference_process.is_alive():
             process_name = "app_edgeai.py"
             # Terminate/kill inference stream pipeline using its process id
@@ -647,7 +667,7 @@ def get_sensor():
     line_count = 0
     """
     Use setup_cameras.sh sdk script to check camera connection and
-    if yes,extract video device file
+    if yes,extract video device file name
     """
     data = subprocess.Popen(
         "{}{}/setup_cameras.sh".format(cwd, Dir_Path.SCRIPTS_DIR.value),
@@ -719,10 +739,12 @@ def post_project(x: Project):
     global cwd
     project = x.dict()
     dir_name = "{}{}".format(cwd, Dir_Path.PROJECT_DIR.value)
+    # Delete previous project inside projects folder
     for dir in os.listdir(dir_name):
         path = os.path.join(dir_name, dir)
         if len(path) != 0:
-            os.system("rm -r {}".format(path))
+            if os.path.isdir("{}{}/{}".format(cwd, Dir_Path.PROJECT_DIR.value, id)):
+                os.system("rm -r {}".format(path))
     os.system("mkdir {}{}/{}".format(cwd, Dir_Path.PROJECT_DIR.value, x.id))
     with open(
         "{}{}/{}/project.config".format(cwd, Dir_Path.PROJECT_DIR.value, x.id), "w"
@@ -761,6 +783,7 @@ async def upload_model(id, file: UploadFile = File(...)):
                 "r+",
             ) as config:
                 project = json.load(config)
+                # confirm project folder before extraction
                 if project["id"] == id:
                     count = count + 1
                     name = project["name"]
@@ -770,7 +793,7 @@ async def upload_model(id, file: UploadFile = File(...)):
                     )
                     print("EXTRACTED")
                     os.remove("{}/outputFile.tar.gz".format(cwd))
-
+                    # to get model file path
                     with open(
                         "{}{}/{}/param.yaml".format(
                             cwd, Dir_Path.PROJECT_DIR.value, project["id"]
@@ -813,6 +836,7 @@ def get_projects():
     """
     project_list = []
     count = 0
+    # iterate through files /folders inside projects folder
     for path in glob.iglob(
         "{}{}/**".format(cwd, Dir_Path.PROJECT_DIR.value), recursive=True
     ):
@@ -824,6 +848,7 @@ def get_projects():
                     count = count + 1
             except:
                 continue
+    # if count 0, sent project doesnt exist response
     if count == 0:
         raise HTTPException(
             status_code=Response_Code.NOT_FOUND.value,
@@ -842,16 +867,15 @@ def get_project_id(id):
     """
     count = 0
     global cwd
-
-    if os.path.isdir(
-        "{}{}/{}".format(cwd, Dir_Path.PROJECT_DIR.value, id)
-    ):  # filter dirs
+    # check whether specified project exists
+    if os.path.isdir("{}{}/{}".format(cwd, Dir_Path.PROJECT_DIR.value, id)):
         with open(
             "{}{}/{}/project.config".format(cwd, Dir_Path.PROJECT_DIR.value, id), "r+"
         ) as config:
             project = json.load(config)
             if project["id"] == id:
                 count = count + 1
+    # if count 0, sent project doesnt exist response
     if count == 0:
         raise HTTPException(
             status_code=Response_Code.NOT_FOUND.value,
@@ -871,13 +895,13 @@ def delete_project(id):
     count = 0
     global cwd
 
-    if os.path.isdir(
-        "{}{}/{}".format(cwd, Dir_Path.PROJECT_DIR.value, id)
-    ):  # filter dirs
+    # check whether specified project exists
+    if os.path.isdir("{}{}/{}".format(cwd, Dir_Path.PROJECT_DIR.value, id)):
         with open(
             "{}{}/{}/project.config".format(cwd, Dir_Path.PROJECT_DIR.value, id), "r+"
         ) as config:
             project = json.load(config)
+            # Delete project and update count to 1
             if project["id"] == id:
                 os.system(
                     "rm -r {}{}/{}".format(
@@ -885,7 +909,7 @@ def delete_project(id):
                     )
                 )
                 count = count + 1
-
+    # if count 0, sent project doesnt exist response
     if count == 0:
         raise HTTPException(
             status_code=Response_Code.NOT_FOUND.value,
@@ -903,14 +927,15 @@ if __name__ == "__main__":
     Check if projects folder for stroing model is created, if no create folder.
     """
     process_name = "node"
+    # To kill any node process beforehand using pid so as to not affect the udp server initiation
     for proc in psutil.process_iter():
         if process_name in proc.name():
             pid = proc.pid
             print(pid)
             os.system("kill -1 {}".format(pid))
     os.system("killall node")
-    # if not os.path.isdir("{}{}".format(cwd, Dir_Path.PROJECT_DIR.value)):
-    # os.system("mkdir {}{}".format(cwd, Dir_Path.PROJECT_DIR.value))
+    if not os.path.isdir("{}{}".format(cwd, Dir_Path.PROJECT_DIR.value)):
+        os.system("mkdir {}{}".format(cwd, Dir_Path.PROJECT_DIR.value))
 
     uvicorn.run(
         "device_agent:app",
