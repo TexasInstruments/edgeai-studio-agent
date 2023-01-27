@@ -75,6 +75,7 @@ def run_loop(config, name=""):
                 pid = proc.pid
         for line in process.stdout:
             line = line.rstrip()
+            #parse inference time from log
             inference = r"inference.*?\s+?(?P<inference_time>\d{1,5}\.\d{1,})\s+?m?s.*?from\s+(?P<sampples>\d+?)\s+?samples"
             m = re.search(inference, line)
             if m is not None:
@@ -169,7 +170,7 @@ class InferenceProcess(Process):
         """
         Constructor for InferenceProcess class
         Args:
-            model_config: name of config yaml file in sdk
+            model_config: name of config yaml file in config folder
         """
         self.model_config = model_config
         print(self.model_config)
