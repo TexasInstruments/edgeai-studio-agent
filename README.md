@@ -39,7 +39,7 @@ ssh root@ip-address
 
 3. Extract the file in device using command(Note: Extract to /opt/ location) :  
 ```
-tar –xvf /opt/ti-edgeai-studio-evm-agent-develop-8.5.tar.gz   
+tar -xvf /opt/ti-edgeai-studio-evm-agent-develop-8.5.tar.gz   
 ```
 4. Navigate to the folder using CMD:
 ```
