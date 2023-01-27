@@ -214,6 +214,10 @@ async def websocket_endpoint(websocket: WebSocket, client_id: int):
     await manager2.connect(websocket)
     try:
         while True:
+            """
+            Receives inference parameters from websocket endpoint in vstream_thread file
+            and broadcast to GUI
+            """
             data = await websocket.receive_text()
             infer_data = json.loads(data)
             await manager2.broadcast_inference(infer_data)
@@ -224,11 +228,15 @@ async def websocket_endpoint(websocket: WebSocket, client_id: int):
 @app.websocket("/ws/{client_id}/usbcam_status")
 async def websocket_endpoint(websocket: WebSocket, client_id: int):
     """
-    Websocket endpoint to send inference parameters
+    Websocket endpoint to send usb camera status
     """
     await manager3.connect(websocket)
     try:
         while True:
+            """
+            Receives usb cam status from websocket endpoint in vstream_thread file
+            and broadcast to GUI
+            """
             data = await websocket.receive_text()
             await manager3.broadcast_status(data)
 
