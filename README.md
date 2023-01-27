@@ -33,17 +33,17 @@ ssh root@ip-address
 
 1. Download the evm agent repo tar file from gitlab into your pc from this link: (https://gitlab.ignitarium.in/ti-edgeai_studio/ti-edgeai-studio-evm-agent)
 
-(Note: If a clone of above repo can be done on target EVM this will be the recommended option since changes we make can easily be updated. If cloning skip steps 2 and 3 , always clone repo into /opt/ on target and **if cloning replace ti-edgeai-studio-evm-agent-main with ti-edgeai-studio-evm-agent in the upcoming commands ** ) 
+(Note: If a clone of above repo can be done on target EVM this will be the recommended option since changes we make can easily be updated. If cloning skip steps 2 and 3 , always clone repo into /opt/ on target and **if cloning replace ti-edgeai-studio-evm-agent-develop-8.5 with ti-edgeai-studio-evm-agent in the upcoming commands ** ) 
 
 2. Transfer above .tar into target to this location  /opt/
 
 3. Extract the file in device using command(Note: Extract to /opt/ location) :  
 ```
-tar –xvf /opt/ti-edgeai-studio-evm-agent-main.tar.gz   
+tar –xvf /opt/ti-edgeai-studio-evm-agent-develop-8.5.tar.gz   
 ```
 4. Navigate to the folder using CMD:
 ```
-cd /opt/ti-edgeai-studio-evm-agent-main/ 
+cd /opt/ti-edgeai-studio-evm-agent-develop-8.5/ 
 ```
 5. Run the following script for installing packages.
 ```
@@ -51,14 +51,14 @@ cd /opt/ti-edgeai-studio-evm-agent-main/
 ```
 6.Run the following command to apply patch on gst_wrapper.py sdk file to set bitrate
 ```
-patch /opt/edge_ai_apps/apps_python/gst_wrapper.py /opt/ti-edgeai-studio-evm-agent-main/gst_wrapper_patch.txt
+patch /opt/edge_ai_apps/apps_python/gst_wrapper.py /opt/ti-edgeai-studio-evm-agent-develop-8.5/gst_wrapper_patch.txt
 ```
 6. Go to src folder using CMD: 
 ```
-cd /opt/ti-edgeai-studio-evm-agent-main/src 
+cd /opt/ti-edgeai-studio-evm-agent-develop-8.5/src 
 ```
 7. Execute device agent script using CMD: 
 ```
 python3 device_agent.py  
 ```
-- Note: Ensure you are inside folder /opt/ti-edgeai-studio-evm-agent-main/src before running device_agent.py
+- Note: Ensure you are inside folder /opt/ti-edgeai-studio-evm-agent-develop-8.5/src before running device_agent.py
