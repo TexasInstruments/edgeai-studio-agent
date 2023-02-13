@@ -28,8 +28,8 @@
 #  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import os
 from enum import Enum
-
 
 class Response_Code(Enum):
     """
@@ -84,6 +84,8 @@ class Dir_Path(Enum):
     Class to store folder paths
     """
 
+    edgeai_gst_apps_path = os.getenv('EDGEAI_GST_APPS_PATH')
+
     PROJECT_DIR = "/../../projects"
-    SCRIPTS_DIR = "/../../edge_ai_apps/scripts"
-    INFER_DIR = "/../../edge_ai_apps/apps_python"
+    SCRIPTS_DIR = os.path.join(edgeai_gst_apps_path,"scripts")
+    INFER_DIR = os.path.join(edgeai_gst_apps_path,"apps_python")
