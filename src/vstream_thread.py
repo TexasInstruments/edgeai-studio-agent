@@ -34,11 +34,9 @@ from definitions import Dir_Path
 import time
 import os
 import psutil
-import cv2
 import subprocess
 import re
 import json
-import sys
 
 cwd = os.getcwd()
 
