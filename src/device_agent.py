@@ -49,8 +49,6 @@ from definitions import Response_Code, Response_Details, Server_Details, Dir_Pat
 import yaml
 import math
 import tarfile
-import sys
-import base64
 import aiofiles
 
 app = FastAPI()
