@@ -38,9 +38,6 @@ import subprocess
 import re
 import json
 
-cwd = os.getcwd()
-
-
 def run_loop(config, name=""):
     """ "
     Function call for threading
@@ -56,8 +53,7 @@ def run_loop(config, name=""):
         ws3 = create_connection("ws://localhost:8000/ws/1/usbcam_status")
         time.sleep(0.5)
         process = subprocess.Popen(
-            "{}{}/app_edgeai.py ../config/{}.yaml".format(
-                cwd,
+            "{}/app_edgeai.py ../config/{}.yaml".format(
                 Dir_Path.INFER_DIR.value,
                 model_config,
             ),
@@ -109,7 +105,7 @@ def run_loop(config, name=""):
 
             # Below subprocess is run to check usb cam's availability during streaming
             data = subprocess.Popen(
-                "{}{}/setup_cameras.sh".format(cwd, Dir_Path.SCRIPTS_DIR.value),
+                "{}/setup_cameras.sh".format(Dir_Path.SCRIPTS_DIR.value),
                 stdout=subprocess.PIPE,
                 bufsize=1,
                 universal_newlines=True,
@@ -138,7 +134,7 @@ def run_loop(config, name=""):
 
         while True:
             data = subprocess.Popen(
-                "{}{}/setup_cameras.sh".format(cwd, Dir_Path.SCRIPTS_DIR.value),
+                "{}/setup_cameras.sh".format(Dir_Path.SCRIPTS_DIR.value),
                 stdout=subprocess.PIPE,
                 bufsize=1,
                 universal_newlines=True,
