@@ -33,7 +33,7 @@ var express = require('express')
 var http = require('http')
 var EventEmitter = require('events').EventEmitter;
 let cors = require("cors");
-var bodyParser = require('body-parser')
+var bodyParser = require('express/node_modules/body-parser')
 
 var app = express();
 app.use(express.static(__dirname + '/'));
