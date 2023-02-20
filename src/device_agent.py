@@ -676,7 +676,7 @@ def get_sensor():
     if yes,extract video device file name
     """
     data = subprocess.Popen(
-        "{}{}/setup_cameras.sh".format(cwd, Dir_Path.SCRIPTS_DIR.value),
+        "{}/setup_cameras.sh".format(Dir_Path.SCRIPTS_DIR.value),
         stdout=subprocess.PIPE,
         bufsize=1,
         universal_newlines=True,
