@@ -4,8 +4,8 @@ inputs:
   input0:
     source: /dev/video2
     format: jpeg
-    width: 640
-    height: 360
+    width: 1280
+    height: 720
     framerate: 30
 models:
   model0:
@@ -16,10 +16,11 @@ outputs:
     sink: remote
     host: 127.0.0.1
     port: 8081
-    width: 640
-    height: 360
+    width: 1280
+    height: 720
     payloader: mp4mux
     bitrate: 1000000
+    encoder: v4l2h264enc
 flows:
   flow0:
   - input0
