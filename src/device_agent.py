@@ -98,6 +98,7 @@ class Session(BaseModel):
     tcp_pid: int = Field(default=Server_Details.TCP_PID.value)
     data_pipeline_status: str
     data_pipeline_pid: int
+    stream_type: str = Field(default="null")
 
 
 class DeviceItem(BaseModel):
@@ -120,6 +121,7 @@ class Sensor(BaseModel):
     id: str
     type: str
     device: List[DeviceItem]
+    sdk_version: str
 
 
 class Project(BaseModel):
@@ -286,7 +288,7 @@ def start_sensor_session(id, x: Model):
 
             try:
                 # Start raw video stream thread with parameter to indicate device file name
-                rawvideo_process = RawvideoProcess(dev_num)
+                rawvideo_process = RawvideoProcess(dev_num, x.session.stream_type)
                 rawvideo_process.start()
                 process_name = "python_gst.py"
                 time.sleep(1.5)
@@ -380,6 +382,12 @@ def start_sensor_session(id, x: Model):
                     y["models"].update(model)
                     y["flows"]["flow0"][1] = "model{}".format(keyCount)
                     y["inputs"]["input0"]["source"] = dev_num
+                    if x.session.stream_type == 'image':
+                        y["outputs"]["output0"]["encoder"] = 'jpegenc'
+                        y["outputs"]["output0"]["payloader"] = 'multipartmux'
+                    else:
+                        y["outputs"]["output0"]["encoder"] = 'v4l2h264enc'
+                        y["outputs"]["output0"]["payloader"] = 'mp4mux'
 
                 with open(config_yaml_path, "w") as fout:
                     yaml.safe_dump(y, fout, sort_keys=False)
@@ -505,10 +513,13 @@ def initiate_sensor_session(x: Sensor):
                         "status": x.device[0].status,
                     }
                 ],
+                "sdk_version": x.sdk_version
             },
         )
         sensor_session = session.dict()
         return session
+    ss_id = str(uuid.uuid4())
+    sensor_session['session']['id']=ss_id
     return sensor_session
 
 
@@ -716,6 +727,7 @@ def get_sensor():
         sensor_type = "Webcam"
         description = "device available for capture"
         status = "available"
+        sdk_version = os.getenv('EDGEAI_VERSION')
         sensor.append(
             Sensor(
                 name=name,
@@ -729,6 +741,7 @@ def get_sensor():
                         status=status,
                     )
                 ],
+                sdk_version=sdk_version
             )
         )
         return sensor
