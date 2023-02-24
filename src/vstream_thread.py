@@ -38,7 +38,7 @@ import subprocess
 import re
 import json
 
-def run_loop(config, name=""):
+def run_loop(config, stream_type, name=""):
     """ "
     Function call for threading
     Args:
@@ -127,7 +127,7 @@ def run_loop(config, name=""):
         height = 360
         dev_num = config
         ws3 = create_connection("ws://localhost:8000/ws/1/usbcam_status")
-        cmd = "./python_gst.py {} {} {}".format(dev_num, width, height)
+        cmd = "./python_gst.py {} {} {} {}".format(dev_num, width, height, stream_type)
         process = subprocess.Popen(
             cmd, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True, shell=True
         )
@@ -172,7 +172,7 @@ class InferenceProcess(Process):
 
     def run(self):
         print("Inference thread started....")
-        run_loop(self.model_config, "INFERENCE")
+        run_loop(self.model_config, None, "INFERENCE")
         print("Inference thread completed...!!!")
 
 
@@ -181,16 +181,17 @@ class RawvideoProcess(Process):
     Class for starting raw stream thread
     """
 
-    def __init__(self, dev_num):
+    def __init__(self, dev_num, stream_type):
         """
         Constructor for RawVideoProcess class
         Args:
             dev_num: video device file name
         """
         self.dev_num = dev_num
+        self.stream_type = stream_type
         super(RawvideoProcess, self).__init__()
 
     def run(self):
         print("raw video stream thread started....")
-        run_loop(self.dev_num, "RAWVIDEO")
+        run_loop(self.dev_num, self.stream_type, "RAWVIDEO")
         print("raw video stream thread completed...!!!")

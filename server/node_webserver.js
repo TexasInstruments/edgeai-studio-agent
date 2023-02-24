@@ -38,8 +38,8 @@ var bodyParser = require('express/node_modules/body-parser')
 var app = express();
 app.use(express.static(__dirname + '/'));
 //Set HTTP and UDP port number
-const port = 8080;  
-const udp_port = 8081; 
+const port = 8080;
+const udp_port = 8081;
 
 //Set Cors settings
 const corsOptions = {
@@ -68,13 +68,11 @@ var emitter = new EventEmitter();
  * whenever data is emitted from udp socket
  */
 app.get('/raw_videostream/:id', function (req, res) {
-    
     res.writeHead(200, {
         'Content-Type': 'video/mp4',
     });
     console.log(req.params.id)
     emitter.on('data', function(data) {
-         
          console.log('data event received...');
          const chunk = data.length
          if(chunk > 0){
@@ -83,9 +81,7 @@ app.get('/raw_videostream/:id', function (req, res) {
          else{
          console.log('empty')
          res.status(500).end('stop')
-         
          }
-     
     });
 
     emitter.on('end', function() {
@@ -96,11 +92,39 @@ app.get('/raw_videostream/:id', function (req, res) {
     console.log('returning...');
 });
 
-/**Stop udp server from sending pending data after 
+/**
+ * send image stream as response whenever
+ * data is emitted from udp socket
+ */
+app.get('/raw_imagestream/:id', function (req, res) {
+  res.writeHead(200, {
+      'Content-Type': 'multipart/x-mixed-replace;boundary=--spionisto',
+  });
+  console.log(req.params.id)
+  emitter.on('data', function(data) {
+       console.log('data event received...');
+       const chunk = data.length
+       if(chunk > 0){
+          res.write(data)
+       }
+       else{
+       console.log('empty')
+       res.status(500).end('stop')
+       }
+  });
+
+  emitter.on('end', function() {
+      console.log('Response closed.');
+res.end();
+  });
+
+  console.log('returning...');
+});
+
+/**Stop udp server from sending pending data after
  *deleting pipeline
  */
 app.get('/test', function (req, res) {
-   
    emitter.emit('data', '');
    res.status(200).send('Stopped stream')
 
@@ -130,7 +154,7 @@ udpServer.on('error', (err) => {
   udpServer.close();
 });
 
-//Emit video data received from gstreamer 
+//Emit video data received from gstreamer
 udpServer.on('message', (msg, rinfo) => {
   emitter.emit('data', msg);
 });

@@ -64,11 +64,22 @@ if __name__ == "__main__":
     Function to run gstreamer pipeline for raw video stream
     """
     Gst.init()
-    p = Gst.parse_launch(
-        " v4l2src device={} ! videoconvert ! video/x-raw, width={}, height={}, framerate=30/1, format=NV12 ! v4l2h264enc bitrate=1000000 gop-size=30 ! h264parse ! mp4mux fragment-duration=1 ! udpsink host=127.0.0.1  port=8081".format(
-            sys.argv[1], sys.argv[2], sys.argv[3]
+    if (sys.argv[4] == 'video'):
+        print("starting video stream")
+        p = Gst.parse_launch(
+            " v4l2src device={} ! image/jpeg, width={}, height={} ! jpegdec ! tiovxdlcolorconvert ! video/x-raw, format=NV12 ! v4l2h264enc bitrate=1000000 gop-size=30 ! h264parse ! mp4mux fragment-duration=1 ! udpsink host=127.0.0.1  port=8081".format(
+                sys.argv[1], sys.argv[2], sys.argv[3]
+            )
         )
-    )
+    elif (sys.argv[4] == 'image'):
+        print("starting image stream")
+        p = Gst.parse_launch(
+            " v4l2src device={} ! image/jpeg, width={}, height={} ! multipartmux boundary=spionisto ! rndbuffersize max=65000 ! udpsink host=127.0.0.1  port=8081".format(
+                sys.argv[1], sys.argv[2], sys.argv[3]
+            )
+        )
+    else:
+        print("invalid stream type")
     bus = p.get_bus()
     # allow bus to emit messages to main thread
     bus.add_signal_watch()
