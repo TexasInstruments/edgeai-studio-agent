@@ -88,4 +88,4 @@ class Dir_Path(Enum):
 
     PROJECT_DIR = "/../../projects"
     SCRIPTS_DIR = os.path.join(edgeai_gst_apps_path,"scripts")
-    INFER_DIR = os.path.join(edgeai_gst_apps_path,"apps_python")
+    INFER_DIR = os.path.join(edgeai_gst_apps_path,"scripts/optiflow")
