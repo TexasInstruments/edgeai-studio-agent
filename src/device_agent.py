@@ -396,7 +396,7 @@ def start_sensor_session(id, x: Model):
                         # Start inference thread with the parameter to indicate type of inference
                         inference_process = InferenceProcess(model_type)
                         inference_process.start()
-                        process_name = "app_edgeai.py"
+                        process_name = "optiflow"
                         time.sleep(2)
                         # get the pid for inference
                         for proc in psutil.process_iter():
@@ -639,7 +639,7 @@ def delete_data_pipeline(id):
     else:
         # check if inference stream thread is running
         if inference_process is not None and inference_process.is_alive():
-            process_name = "app_edgeai.py"
+            process_name = "parse_gst_trace"
             # Terminate/kill inference stream pipeline using its process id
             for proc in psutil.process_iter():
                 if process_name in proc.name():
