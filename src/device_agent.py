@@ -261,12 +261,12 @@ def start_sensor_session(id, x: Model):
     global keyCount
     global dev_num
     global config_yaml_path
-    process_name = "node"
+    process_name = "node_webserver.js"
     count = 0
     model_type = None
     # check if node process running or not
     for proc in psutil.process_iter():
-        if process_name in proc.name():
+        if process_name in str(proc.cmdline()):
             pid = proc.pid
             count = 1
             break
@@ -454,7 +454,7 @@ def initiate_sensor_session(x: Sensor):
     count = 0
     line_count = 0
     j = 0
-    process_name = "node"
+    process_name = "node_webserver.js"
     pid = None
     if x.device[0].id != (sensor[0].device[0].id):
         raise HTTPException(
@@ -463,7 +463,7 @@ def initiate_sensor_session(x: Sensor):
         )
     # Check if node process is running or not and update count variable
     for proc in psutil.process_iter():
-        if process_name in proc.name():
+        if process_name in str(proc.cmdline()):
             pid = proc.pid
             count = 1
             break
@@ -580,10 +580,10 @@ def delete_sensor_session(id):
             status_code=Response_Code.BAD_REQUEST.value,
             detail=Response_Details.INVALID_ID.value,
         )
-    process_name = "node"
+    process_name = "node_webserver.js"
     # Terminate/kill node server using its process id
     for proc in psutil.process_iter():
-        if process_name in proc.name():
+        if process_name in str(proc.cmdline()):
             pid = proc.pid
             count = 1
             os.kill(pid, 2)
@@ -944,14 +944,13 @@ if __name__ == "__main__":
     Check if any node process running if yes, kill them
     Check if projects folder for storing model is created, if no create folder.
     """
-    process_name = "node"
+    process_name = "node_webserver.js"
     # To kill any node process beforehand using pid so as to not affect the udp server initiation
     for proc in psutil.process_iter():
-        if process_name in proc.name():
+        if process_name in str(proc.cmdline()):
             pid = proc.pid
             print(pid)
-            os.system("kill -1 {}".format(pid))
-    os.system("killall node")
+            os.kill(pid, 2)
     if not os.path.isdir("{}{}".format(cwd, Dir_Path.PROJECT_DIR.value)):
         os.system("mkdir {}{}".format(cwd, Dir_Path.PROJECT_DIR.value))
 
