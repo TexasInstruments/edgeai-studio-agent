@@ -53,7 +53,7 @@ def run_loop(config, stream_type, name=""):
         ws3 = create_connection("ws://localhost:8000/ws/1/usbcam_status")
         time.sleep(0.5)
         process = subprocess.Popen(
-            "{}/app_edgeai.py ../config/{}.yaml".format(
+            "{}/optiflow.sh ../config/{}.yaml".format(
                 Dir_Path.INFER_DIR.value,
                 model_config,
             ),
@@ -62,15 +62,15 @@ def run_loop(config, stream_type, name=""):
             universal_newlines=True,
             shell=True,
         )
-        time.sleep(1)
-        process_name = "app_edgeai.py"
+        time.sleep(5)
+        process_name = "gst-launch"
         for proc in psutil.process_iter():
             if process_name in proc.name():
                 pid = proc.pid
         for line in process.stdout:
             line = line.rstrip()
             #parse inference time from log
-            inference = r"inference.*?\s+?(?P<inference_time>\d{1,5}\.\d{1,})\s+?m?s.*?from\s+(?P<sampples>\d+?)\s+?samples"
+            inference = r"inferer.*?\s+?(?P<inference_time>\d{1,5}\.\d{1,})\s+?"
             m = re.search(inference, line)
             if m is not None:
                 process2 = subprocess.Popen(
