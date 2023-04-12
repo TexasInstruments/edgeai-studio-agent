@@ -122,6 +122,7 @@ class Sensor(BaseModel):
     type: str
     device: List[DeviceItem]
     sdk_version: str
+    device_name: str
 
 
 class Project(BaseModel):
@@ -513,7 +514,8 @@ def initiate_sensor_session(x: Sensor):
                         "status": x.device[0].status,
                     }
                 ],
-                "sdk_version": x.sdk_version
+                "sdk_version": x.sdk_version,
+                "device_name": x.device_name
             },
         )
         sensor_session = session.dict()
@@ -728,6 +730,7 @@ def get_sensor():
         description = "device available for capture"
         status = "available"
         sdk_version = os.getenv('EDGEAI_VERSION')
+        device_name = os.getenv('DEVICE_NAME')
         sensor.append(
             Sensor(
                 name=name,
@@ -741,7 +744,8 @@ def get_sensor():
                         status=status,
                     )
                 ],
-                sdk_version=sdk_version
+                sdk_version=sdk_version,
+                device_name=device_name
             )
         )
         return sensor
