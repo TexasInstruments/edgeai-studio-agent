@@ -395,7 +395,7 @@ def start_sensor_session(id, x: Model):
 
                     try:
                         # Start inference thread with the parameter to indicate type of inference
-                        inference_process = InferenceProcess(model_type)
+                        inference_process = InferenceProcess(model_type, dev_num)
                         inference_process.start()
                         process_name = "optiflow"
                         time.sleep(2)
