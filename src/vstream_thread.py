@@ -38,11 +38,14 @@ import subprocess
 import re
 import json
 
-def run_loop(config, stream_type, name=""):
+
+def run_loop(dev_num, config, stream_type, name=""):
     """ "
     Function call for threading
     Args:
-        config: Either config yaml file or video device file
+        dev_num: video device file name
+        config: config yaml file for starting inference
+        stream_type: video/image stream
         name: Defines which type of streaming(inference/raw)
     """
     if name == "INFERENCE":
@@ -52,7 +55,8 @@ def run_loop(config, stream_type, name=""):
         ws2 = create_connection("ws://localhost:8000/ws/1/inference")
         ws3 = create_connection("ws://localhost:8000/ws/1/usbcam_status")
         time.sleep(0.5)
-        process = subprocess.Popen(
+        # start inference using optiflow script
+        process1 = subprocess.Popen(
             "{}/optiflow.sh ../config/{}.yaml".format(
                 Dir_Path.INFER_DIR.value,
                 model_config,
@@ -67,26 +71,19 @@ def run_loop(config, stream_type, name=""):
         for proc in psutil.process_iter():
             if process_name in proc.name():
                 pid = proc.pid
-        for line in process.stdout:
+        for line in process1.stdout:
             line = line.rstrip()
-            #parse inference time from log
+            ws1.send(line)
+
+            # get memory consumption data using psutil module
+            process2 = psutil.Process(pid)
+            mem_percent = process2.memory_percent()
+            avg_mem = "{:.1f}".format(mem_percent)
+
+            # parse inference time from log
             inference = r"inferer.*?\s+?(?P<inference_time>\d{1,5}\.\d{1,})\s+?"
             m = re.search(inference, line)
             if m is not None:
-                process2 = subprocess.Popen(
-                    "ps -p {} -o %mem".format(pid),
-                    stdout=subprocess.PIPE,
-                    bufsize=1,
-                    universal_newlines=True,
-                    shell=True,
-                )
-                for line2 in process2.stdout:
-                    line_count = line_count + 1
-                    if line_count == 2:
-                        avg_mem = line2.rstrip()
-                        line_count = 0
-                        break
-
                 infer_param = {
                     "inference_time": {
                         "unit": "ms",
@@ -100,24 +97,15 @@ def run_loop(config, stream_type, name=""):
                     },
                 }
                 ws2.send(json.dumps(infer_param))
-            time.sleep(0.1)
-            ws1.send(line)
 
-            # Below subprocess is run to check usb cam's availability during streaming
-            data = subprocess.Popen(
-                "{}/setup_cameras.sh".format(Dir_Path.SCRIPTS_DIR.value),
-                stdout=subprocess.PIPE,
-                bufsize=1,
-                universal_newlines=True,
-                shell=True,
-            )
-            line3 = data.stdout.readline()
-            if not line3:
-                status = "USB_CAM NOT FOUND"
+            # check usb cam's availability during streaming by checking if video device file is present or not
+            path = "/sys/class/video4linux/"
+            if os.path.exists(os.path.join(path, dev_num)):
+                status = "AVAILABLE"
                 ws3.send(status)
                 time.sleep(0.1)
             else:
-                status = "AVAILABLE"
+                status = "USB_CAM NOT FOUND"
                 ws3.send(status)
                 time.sleep(0.1)
             time.sleep(0.1)
@@ -125,30 +113,22 @@ def run_loop(config, stream_type, name=""):
     elif name == "RAWVIDEO":
         width = 640
         height = 360
-        dev_num = config
         ws3 = create_connection("ws://localhost:8000/ws/1/usbcam_status")
+        # start raw stream by invoking python_gst script
         cmd = "./python_gst.py {} {} {} {}".format(dev_num, width, height, stream_type)
         process = subprocess.Popen(
             cmd, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True, shell=True
         )
 
         while True:
-            data = subprocess.Popen(
-                "{}/setup_cameras.sh".format(Dir_Path.SCRIPTS_DIR.value),
-                stdout=subprocess.PIPE,
-                bufsize=1,
-                universal_newlines=True,
-                shell=True,
-            )
-            line = data.stdout.readline()
-            if not line:
-                status = "USB_CAM NOT FOUND"
-                time.sleep(0.1)
+            # check usb cam's availability during streaming by checking if video device file is present or not
+            path = "/sys/class/video4linux/"
+            if os.path.exists(os.path.join(path, dev_num)):
+                status = "AVAILABLE"
                 ws3.send(status)
                 time.sleep(0.1)
             else:
-                status = "AVAILABLE"
-                time.sleep(0.1)
+                status = "USB_CAM NOT FOUND"
                 ws3.send(status)
                 time.sleep(0.1)
     else:
@@ -160,19 +140,21 @@ class InferenceProcess(Process):
     Class for starting inference thread
     """
 
-    def __init__(self, model_config):
+    def __init__(self, model_config, dev_num):
         """
         Constructor for InferenceProcess class
         Args:
             model_config: name of config yaml file in config folder
+            dev_num: video device file name
         """
         self.model_config = model_config
+        self.dev_num = dev_num
         print(self.model_config)
         super(InferenceProcess, self).__init__()
 
     def run(self):
         print("Inference thread started....")
-        run_loop(self.model_config, None, "INFERENCE")
+        run_loop(self.dev_num, self.model_config, None, "INFERENCE")
         print("Inference thread completed...!!!")
 
 
@@ -186,6 +168,7 @@ class RawvideoProcess(Process):
         Constructor for RawVideoProcess class
         Args:
             dev_num: video device file name
+            stream_type: video/image stream
         """
         self.dev_num = dev_num
         self.stream_type = stream_type
@@ -193,5 +176,5 @@ class RawvideoProcess(Process):
 
     def run(self):
         print("raw video stream thread started....")
-        run_loop(self.dev_num, self.stream_type, "RAWVIDEO")
+        run_loop(self.dev_num, None, self.stream_type, "RAWVIDEO")
         print("raw video stream thread completed...!!!")
