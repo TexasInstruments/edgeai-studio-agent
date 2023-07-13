@@ -1,8 +1,8 @@
-title: Image Classification Demo
+title: Image Classification
 log_level: 2
 inputs:
   input0:
-    source: /dev/video2
+    source: /dev/video-usb-cam0
     format: jpeg
     width: 1280
     height: 720
@@ -18,9 +18,8 @@ outputs:
     port: 8081
     width: 1280
     height: 720
-    payloader: mp4mux
+    encoding: jpeg
     bitrate: 1000000
-    encoder: v4l2h264enc
 flows:
   flow0:
   - input0
