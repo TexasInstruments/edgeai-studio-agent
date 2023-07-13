@@ -384,11 +384,9 @@ def start_sensor_session(id, x: Model):
                     y["flows"]["flow0"][1] = "model{}".format(keyCount)
                     y["inputs"]["input0"]["source"] = dev_num
                     if x.session.stream_type == 'image':
-                        y["outputs"]["output0"]["encoder"] = 'jpegenc'
-                        y["outputs"]["output0"]["payloader"] = 'multipartmux'
+                        y["outputs"]["output0"]["encoding"] = 'jpeg'
                     else:
-                        y["outputs"]["output0"]["encoder"] = 'v4l2h264enc'
-                        y["outputs"]["output0"]["payloader"] = 'mp4mux'
+                        y["outputs"]["output0"]["encoding"] = 'mp4'
 
                 with open(config_yaml_path, "w") as fout:
                     yaml.safe_dump(y, fout, sort_keys=False)
