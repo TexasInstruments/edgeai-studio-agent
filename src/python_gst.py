@@ -67,7 +67,7 @@ if __name__ == "__main__":
     if (sys.argv[4] == 'video'):
         print("starting video stream")
         p = Gst.parse_launch(
-            " v4l2src device={} ! image/jpeg, width={}, height={} ! jpegdec ! tiovxdlcolorconvert ! video/x-raw, format=NV12 ! v4l2h264enc extra-controls=\"controls,frame_level_rate_control_enable=1,video_bitrate=10000000,video_gop_size=30\" ! h264parse ! mp4mux fragment-duration=1 ! udpsink host=127.0.0.1  port=8081".format(
+            " v4l2src device={} ! image/jpeg, width={}, height={} ! jpegdec ! tiovxdlcolorconvert ! video/x-raw, format=NV12 ! v4l2h264enc extra-controls=\"controls,frame_level_rate_control_enable=1,video_bitrate=1000000,video_gop_size=30\" ! h264parse ! mp4mux fragment-duration=1 ! udpsink host=127.0.0.1  port=8081".format(
                 sys.argv[1], sys.argv[2], sys.argv[3]
             )
         )
