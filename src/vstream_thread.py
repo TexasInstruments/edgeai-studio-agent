@@ -99,8 +99,7 @@ def run_loop(dev_num, config, stream_type, name=""):
                 ws2.send(json.dumps(infer_param))
 
             # check usb cam's availability during streaming by checking if video device file is present or not
-            path = "/sys/class/video4linux/"
-            if os.path.exists(os.path.join(path, dev_num)):
+            if os.path.exists(dev_num):
                 status = "AVAILABLE"
                 ws3.send(status)
                 time.sleep(0.1)
@@ -122,8 +121,7 @@ def run_loop(dev_num, config, stream_type, name=""):
 
         while True:
             # check usb cam's availability during streaming by checking if video device file is present or not
-            path = "/sys/class/video4linux/"
-            if os.path.exists(os.path.join(path, dev_num)):
+            if os.path.exists(dev_num):
                 status = "AVAILABLE"
                 ws3.send(status)
                 time.sleep(0.1)
