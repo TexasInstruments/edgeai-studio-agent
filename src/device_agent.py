@@ -709,7 +709,10 @@ def get_sensor():
         parts = output.split(" ")
         # Extracted video device file name copied to dev_num variable
         dev_num = parts[6]
-        dev_no = dev_num.replace("/dev/", "")
+        # Get actual device id
+        dev_no = os.readlink(dev_num)
+        dev_no = dev_no.strip()
+        dev_no = dev_no.replace("/dev/", "")
         # Extract sensor name
         usb_name = subprocess.Popen(
             "cat /sys/class/video4linux/{}/name".format(dev_no),
