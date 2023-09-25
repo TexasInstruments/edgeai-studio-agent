@@ -96,7 +96,7 @@ app.get('/raw_videostream/:id', function (req, res) {
  * send image stream as response whenever
  * data is emitted from udp socket
  */
-app.get('/raw_imagestream/:id', function (req, res) {
+app.get('/stream/', function (req, res) {
   res.writeHead(200, {
       'Content-Type': 'multipart/x-mixed-replace;boundary=--spionisto',
   });
