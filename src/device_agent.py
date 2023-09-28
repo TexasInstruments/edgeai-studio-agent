@@ -364,7 +364,13 @@ def start_sensor_session(id, x: Model):
                         with open("{}/param.yaml".format(path), "r") as fp:
                             z = json.dumps(yaml.load(fp, Loader=yaml.FullLoader))
                             z = json.loads(z)
-                            threshold = z["postprocess"]["detection_threshold"]
+                            if (
+                                "postprocess" in z
+                                and "detection_threshold" in z["postprocess"]
+                            ):
+                                threshold = z["postprocess"]["detection_threshold"]
+                            else:
+                                threshold = 0.6
 
                         model = {
                             "model{}".format(keyCount): {
