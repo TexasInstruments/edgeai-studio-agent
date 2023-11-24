@@ -30,7 +30,7 @@
 
 from multiprocessing import Process
 from websocket import create_connection
-from definitions import Dir_Path
+from definitions import Dir_Path, SOC_Vals
 import time
 import os
 import psutil
@@ -66,7 +66,7 @@ def run_loop(dev_num, config, stream_type, name=""):
             universal_newlines=True,
             shell=True,
         )
-        time.sleep(5)
+        time.sleep(SOC_Vals.INF_GST_LAUNCH_TIMEOUT.value)
         process_name = "gst-launch"
         for proc in psutil.process_iter():
             if process_name in proc.name():
