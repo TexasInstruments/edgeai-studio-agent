@@ -45,7 +45,7 @@ from fastapi.responses import FileResponse
 import uuid
 import glob
 import hashlib
-from definitions import Response_Code, Response_Details, Server_Details, Dir_Path
+from definitions import Response_Code, Response_Details, Server_Details, Dir_Path, SOC_Vals
 import yaml
 import math
 import tarfile
@@ -292,7 +292,7 @@ def start_sensor_session(id, x: Model):
                 rawvideo_process = RawvideoProcess(dev_num, x.session.stream_type)
                 rawvideo_process.start()
                 process_name = "python_gst.py"
-                time.sleep(1.5)
+                time.sleep(SOC_Vals.RAWVIDEOPROCESS_LAUNCH_TIMEOUT.value)
                 for proc in psutil.process_iter():
                     if process_name in proc.name():
                         pid = proc.pid
@@ -402,7 +402,7 @@ def start_sensor_session(id, x: Model):
                         inference_process = InferenceProcess(model_type, dev_num)
                         inference_process.start()
                         process_name = "optiflow"
-                        time.sleep(2)
+                        time.sleep(SOC_Vals.OPTIFLOW_LAUNCH_TIMEOUT.value)
                         # get the pid for inference
                         for proc in psutil.process_iter():
                             if process_name in proc.name():
