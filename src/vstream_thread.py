@@ -39,11 +39,11 @@ import re
 import json
 
 
-def run_loop(dev_num, config, stream_type, name=""):
+def run_loop(dev_name, config, stream_type, name=""):
     """ "
     Function call for threading
     Args:
-        dev_num: video device file name
+        dev_name: video device file name
         config: config yaml file for starting inference
         stream_type: video/image stream
         name: Defines which type of streaming(inference/raw)
@@ -53,7 +53,7 @@ def run_loop(dev_num, config, stream_type, name=""):
         model_config = config
         ws1 = create_connection("ws://localhost:8000/ws/1/log")
         ws2 = create_connection("ws://localhost:8000/ws/1/inference")
-        ws3 = create_connection("ws://localhost:8000/ws/1/usbcam_status")
+        ws3 = create_connection("ws://localhost:8000/ws/1/cam_status")
         time.sleep(0.5)
         # start inference using optiflow script
         process1 = subprocess.Popen(
@@ -98,13 +98,13 @@ def run_loop(dev_num, config, stream_type, name=""):
                 }
                 ws2.send(json.dumps(infer_param))
 
-            # check usb cam's availability during streaming by checking if video device file is present or not
-            if os.path.exists(dev_num):
+            # check cam's availability during streaming by checking if video device file is present or not
+            if os.path.exists(dev_name):
                 status = "AVAILABLE"
                 ws3.send(status)
                 time.sleep(0.1)
             else:
-                status = "USB_CAM NOT FOUND"
+                status = "CAM NOT FOUND"
                 ws3.send(status)
                 time.sleep(0.1)
             time.sleep(0.1)
@@ -112,21 +112,21 @@ def run_loop(dev_num, config, stream_type, name=""):
     elif name == "RAWVIDEO":
         width = 640
         height = 360
-        ws3 = create_connection("ws://localhost:8000/ws/1/usbcam_status")
+        ws3 = create_connection("ws://localhost:8000/ws/1/cam_status")
         # start raw stream by invoking python_gst script
-        cmd = "./python_gst.py {} {} {} {}".format(dev_num, width, height, stream_type)
+        cmd = "./python_gst.py {} {} {} {}".format(dev_name, width, height, stream_type)
         process = subprocess.Popen(
             cmd, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True, shell=True
         )
 
         while True:
-            # check usb cam's availability during streaming by checking if video device file is present or not
-            if os.path.exists(dev_num):
+            # check cam's availability during streaming by checking if video device file is present or not
+            if os.path.exists(dev_name):
                 status = "AVAILABLE"
                 ws3.send(status)
                 time.sleep(0.1)
             else:
-                status = "USB_CAM NOT FOUND"
+                status = "CAM NOT FOUND"
                 ws3.send(status)
                 time.sleep(0.1)
     else:
@@ -138,21 +138,21 @@ class InferenceProcess(Process):
     Class for starting inference thread
     """
 
-    def __init__(self, model_config, dev_num):
+    def __init__(self, model_config, dev_name):
         """
         Constructor for InferenceProcess class
         Args:
             model_config: name of config yaml file in config folder
-            dev_num: video device file name
+            dev_name: video device file name
         """
         self.model_config = model_config
-        self.dev_num = dev_num
+        self.dev_name = dev_name
         print(self.model_config)
         super(InferenceProcess, self).__init__()
 
     def run(self):
         print("Inference thread started....")
-        run_loop(self.dev_num, self.model_config, None, "INFERENCE")
+        run_loop(self.dev_name, self.model_config, None, "INFERENCE")
         print("Inference thread completed...!!!")
 
 
@@ -161,18 +161,18 @@ class RawvideoProcess(Process):
     Class for starting raw stream thread
     """
 
-    def __init__(self, dev_num, stream_type):
+    def __init__(self, dev_name, stream_type):
         """
         Constructor for RawVideoProcess class
         Args:
-            dev_num: video device file name
+            dev_name: video device file name
             stream_type: video/image stream
         """
-        self.dev_num = dev_num
+        self.dev_name = dev_name
         self.stream_type = stream_type
         super(RawvideoProcess, self).__init__()
 
     def run(self):
         print("raw video stream thread started....")
-        run_loop(self.dev_num, None, self.stream_type, "RAWVIDEO")
+        run_loop(self.dev_name, None, self.stream_type, "RAWVIDEO")
         print("raw video stream thread completed...!!!")

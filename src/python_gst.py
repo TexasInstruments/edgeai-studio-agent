@@ -37,6 +37,39 @@ from gi.repository import Gst, GObject, GLib
 import json
 import sys
 
+def get_pipeline(dev_name, width, height, stream_type):
+
+    pipeline = None
+
+    if (stream_type == 'image'):
+        # USB Camera
+        if "usb" in dev_name:
+            pipeline = 'v4l2src device={} ! image/jpeg, width={}, height={}'.format(dev_name, width, height)
+        # RPi Camera
+        elif "rpi" in dev_name:
+            dev_id = dev_name.strip()[-1]
+            pipeline = 'v4l2src device={} io-mode=5 ! queue leaky=2 ! video/x-bayer, width=1920, height=1080, format=rggb ! \
+                        tiovxisp sensor-name=SENSOR_SONY_IMX219_RPI dcc-isp-file=/opt/imaging/imx219/linear/dcc_viss.bin format-msb=7 \
+                        sink_0::dcc-2a-file=/opt/imaging/imx219/linear/dcc_2a.bin sink_0::device=/dev/v4l-rpi-subdev{} ! video/x-raw, format=NV12 ! \
+                        tiovxmultiscaler ! video/x-raw, width={}, height={} ! jpegenc' .format(dev_name, dev_id, width, height)
+
+        pipeline += ' ! multipartmux boundary=spionisto ! rndbuffersize max=65000 ! udpsink host=127.0.0.1 port=8081'
+
+    elif (stream_type == 'video'):
+        if "usb" in dev_name:
+            pipeline = 'v4l2src device={} ! image/jpeg, width={}, height={} ! jpegdec ! tiovxdlcolorconvert ! video/x-raw, format=NV12'.format(dev_name, width, height)
+
+        elif "rpi" in dev_name:
+            dev_id = dev_name.strip()[-1]
+            pipeline = 'v4l2src device={} io-mode=5 ! queue leaky=2 ! video/x-bayer, width=1920, height=1080, format=rggb ! \
+                        tiovxisp sensor-name=SENSOR_SONY_IMX219_RPI dcc-isp-file=/opt/imaging/imx219/linear/dcc_viss.bin format-msb=7 \
+                        sink_0::dcc-2a-file=/opt/imaging/imx219/linear/dcc_2a.bin sink_0::device=/dev/v4l-rpi-subdev{} ! video/x-raw, format=NV12 ! \
+                        tiovxmultiscaler ! video/x-raw, width={}, height={} ' .format(dev_name, dev_id, width, height)
+
+        pipeline += ' ! v4l2h264enc extra-controls=\"controls,frame_level_rate_control_enable=1,video_bitrate=1000000,video_gop_size=30\" ! h264parse ! mp4mux fragment-duration=1 ! udpsink host=127.0.0.1 port=8081'
+
+    return pipeline
+
 
 def on_message(bus: Gst.Bus, message: Gst.Message, loop: GLib.MainLoop):
     """
@@ -64,22 +97,12 @@ if __name__ == "__main__":
     Function to run gstreamer pipeline for raw video stream
     """
     Gst.init()
-    if (sys.argv[4] == 'video'):
-        print("starting video stream")
-        p = Gst.parse_launch(
-            " v4l2src device={} ! image/jpeg, width={}, height={} ! jpegdec ! tiovxdlcolorconvert ! video/x-raw, format=NV12 ! v4l2h264enc extra-controls=\"controls,frame_level_rate_control_enable=1,video_bitrate=1000000,video_gop_size=30\" ! h264parse ! mp4mux fragment-duration=1 ! udpsink host=127.0.0.1  port=8081".format(
-                sys.argv[1], sys.argv[2], sys.argv[3]
-            )
-        )
-    elif (sys.argv[4] == 'image'):
-        print("starting image stream")
-        p = Gst.parse_launch(
-            " v4l2src device={} ! image/jpeg, width={}, height={} ! multipartmux boundary=spionisto ! rndbuffersize max=65000 ! udpsink host=127.0.0.1  port=8081".format(
-                sys.argv[1], sys.argv[2], sys.argv[3]
-            )
-        )
+    print("starting stream")
+    pipeline = get_pipeline(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
+    if pipeline == None:
+        print ("invalid stream type")
     else:
-        print("invalid stream type")
+        p = Gst.parse_launch(pipeline)
     bus = p.get_bus()
     # allow bus to emit messages to main thread
     bus.add_signal_watch()

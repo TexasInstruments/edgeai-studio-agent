@@ -50,18 +50,11 @@ print(
     % (DEVICE, SDK, args.ip)
 )
 
-DEVICE_DATA = {
-    "id": "/dev/video-usb-cam0",
-    "type": "V4L2",
-    "description": "device available for capture",
-    "status": "available",
-}
-
 SENSOR_DATA = {
     "name": "test_name",
     "id": "test_id",
     "type": "test_type",
-    "device": [DEVICE_DATA],
+    "device": None,
     "sdk_version": SDK,
     "device_name": DEVICE,
 }
@@ -95,6 +88,30 @@ def create_sensor_session():
     if response.status_code == 404:
         print(ERROR_STR, "%s" % response.json())
         return None
+
+    available_devices = []
+    for device in response.json()[0]['device']:
+        available_devices.append(device['name'])
+
+    if len(available_devices) > 1:
+        print("\n----- Please choose 1 to use -----\n")
+        for idx, i in enumerate(available_devices):
+            print(idx, "-", i)
+        print()
+        while 1:
+            choice = input("Enter your choice:")
+            if not choice.isdigit() or int(choice) >= len(available_devices):
+                print("[ERROR] Enter a valid choice.")
+            else:
+                choice = int(choice)
+                break
+    else:
+        choice = 0
+
+    print("\nUsing %s\n" % available_devices[choice])
+
+    # Selecting one of the sources
+    SENSOR_DATA["device"] = [response.json()[0]["device"][choice]]
 
     print(INFO_STR, "Requesting session...")
     response = requests.post(URL + "/sensor-session", data=json.dumps(SENSOR_DATA))

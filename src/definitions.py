@@ -98,9 +98,9 @@ class SOC_Vals(Enum):
     soc = os.getenv('SOC')
 
     if soc in ["j721e", "j721s2", "j784s4", "am62a"]:
-        RAWVIDEOPROCESS_LAUNCH_TIMEOUT = 1.5
-        OPTIFLOW_LAUNCH_TIMEOUT = 2
-        INF_GST_LAUNCH_TIMEOUT = 5
+        RAWVIDEOPROCESS_LAUNCH_TIMEOUT = 2
+        OPTIFLOW_LAUNCH_TIMEOUT = 3
+        INF_GST_LAUNCH_TIMEOUT = 8
     else:
         RAWVIDEOPROCESS_LAUNCH_TIMEOUT = 2
         OPTIFLOW_LAUNCH_TIMEOUT = 3

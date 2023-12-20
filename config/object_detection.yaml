@@ -2,11 +2,16 @@ title: Object Detection
 log_level: 2
 inputs:
   input0:
-    source: /dev/video-usb-cam0
-    format: jpeg
-    width: 1280
-    height: 720
+    source: None
+    format: None
+    width: 0
+    height: 0
     framerate: 30
+    subdev-id: None
+    sen-id: None
+    ldc: None
+    index: 0
+    loop: True
 models:
   model0:
     model_path: /opt/model_zoo/TFL-OD-2020-ssdLite-mobDet-DSP-coco-320x320

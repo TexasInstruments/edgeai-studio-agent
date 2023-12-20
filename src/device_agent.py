@@ -71,7 +71,7 @@ sensor = []
 cwd = os.getcwd()
 keyCount = 0
 config_yaml_path = None
-dev_num = None
+device_details = {}
 
 # Below classes define request-body using pydantic
 class Session(BaseModel):
@@ -101,16 +101,25 @@ class Session(BaseModel):
     stream_type: str = Field(default="null")
 
 
-class DeviceItem(BaseModel):
+class DeviceDetails(BaseModel):
     """
     Class to store device details
     """
 
     id: str
-    type: str
+    width: int
+    height: int
+    format: str
+    subdev: str
+
+class DeviceItem(BaseModel):
+    """
+    Class to store device information
+    """
+
+    name: str
     description: str
     status: str
-
 
 class Sensor(BaseModel):
     """
@@ -226,7 +235,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: int):
         manager2.disconnect(websocket)
 
 
-@app.websocket("/ws/{client_id}/usbcam_status")
+@app.websocket("/ws/{client_id}/cam_status")
 async def websocket_endpoint(websocket: WebSocket, client_id: int):
     """
     Websocket endpoint to send usb camera status
@@ -260,8 +269,8 @@ def start_sensor_session(id, x: Model):
     global sensor_session
     global cwd
     global keyCount
-    global dev_num
     global config_yaml_path
+    global device_details
     process_name = "node_webserver.js"
     count = 0
     model_type = None
@@ -282,14 +291,16 @@ def start_sensor_session(id, x: Model):
             status_code=Response_Code.BAD_REQUEST.value,
             detail=Response_Details.INVALID_ID.value,
         )
+
+    device_detail = device_details[x.sensor.device[0].name]
+
     # check if inference or raw stream to be started
     if x.inference == False:
         # check if raw thread is running; if no start
         if rawvideo_process is None or not rawvideo_process.is_alive():
-
             try:
                 # Start raw video stream thread with parameter to indicate device file name
-                rawvideo_process = RawvideoProcess(dev_num, x.session.stream_type)
+                rawvideo_process = RawvideoProcess(device_detail.id, x.session.stream_type)
                 rawvideo_process.start()
                 process_name = "python_gst.py"
                 time.sleep(SOC_Vals.RAWVIDEOPROCESS_LAUNCH_TIMEOUT.value)
@@ -388,7 +399,12 @@ def start_sensor_session(id, x: Model):
                         }
                     y["models"].update(model)
                     y["flows"]["flow0"][1] = "model{}".format(keyCount)
-                    y["inputs"]["input0"]["source"] = dev_num
+                    y["inputs"]["input0"]["source"] = device_detail.id
+                    y["inputs"]["input0"]["format"] = device_detail.format
+                    y["inputs"]["input0"]["width"] = device_detail.width
+                    y["inputs"]["input0"]["height"] = device_detail.height
+                    y["inputs"]["input0"]["subdev-id"] = device_detail.subdev
+
                     if x.session.stream_type == 'image':
                         y["outputs"]["output0"]["encoding"] = 'jpeg'
                     else:
@@ -399,7 +415,7 @@ def start_sensor_session(id, x: Model):
 
                     try:
                         # Start inference thread with the parameter to indicate type of inference
-                        inference_process = InferenceProcess(model_type, dev_num)
+                        inference_process = InferenceProcess(model_type, device_detail.id)
                         inference_process.start()
                         process_name = "optiflow"
                         time.sleep(SOC_Vals.OPTIFLOW_LAUNCH_TIMEOUT.value)
@@ -461,11 +477,18 @@ def initiate_sensor_session(x: Sensor):
     j = 0
     process_name = "node_webserver.js"
     pid = None
-    if x.device[0].id != (sensor[0].device[0].id):
+    sensor_found = False
+
+    for i in range(len(sensor[0].device)):
+        if x.device[0] == (sensor[0].device[i]):
+            sensor_found = True
+            break
+    if not sensor_found:
         raise HTTPException(
             status_code=Response_Code.METHOD_NOT_ALLOWED.value,
             detail=Response_Details.INVALID_INPUT.value,
         )
+
     # Check if node process is running or not and update count variable
     for proc in psutil.process_iter():
         if process_name in str(proc.cmdline()):
@@ -512,9 +535,8 @@ def initiate_sensor_session(x: Sensor):
                 "type": x.type,
                 "device": [
                     {
-                        "id": x.device[0].id,
-                        "type": x.device[0].type,
-                        "description": x.device[0].type,
+                        "name": x.device[0].name,
+                        "description": x.device[0].description,
                         "status": x.device[0].status,
                     }
                 ],
@@ -680,14 +702,11 @@ def get_sensor():
     """
     Returns sensor details
     """
-    i = 0
-    j = 0
     global sensor
-    global dev_num
+    global device_details
     print("get sensor endpoint called")
     if len(sensor) != 0:
         sensor.clear()
-    line_count = 0
     """
     Use setup_cameras.sh sdk script to check camera connection and
     if yes,extract video device file name
@@ -707,50 +726,52 @@ def get_sensor():
             detail=Response_Details.SENSOR_NOT_FOUND.value,
         )
     else:
+        cam_names=[]
         for l in data.stdout:
-            output = l.rstrip()
-            line_count = line_count + 1
-            if line_count == 1:
-                break
-        parts = output.split(" ")
-        # Extracted video device file name copied to dev_num variable
-        dev_num = parts[6]
-        # Get actual device id
-        dev_no = os.readlink(dev_num)
-        dev_no = dev_no.strip()
-        dev_no = dev_no.replace("/dev/", "")
-        # Extract sensor name
-        usb_name = subprocess.Popen(
-            "cat /sys/class/video4linux/{}/name".format(dev_no),
-            stdout=subprocess.PIPE,
-            bufsize=1,
-            universal_newlines=True,
-            shell=True,
-        )
-        usb_name = usb_name.communicate()[0]
-        if len(usb_name) == 0:
-            name = "unknown device"
-        else:
-            name = usb_name.strip()
-        device_type = "V4L2"
-        sensor_type = "Webcam"
-        description = "device available for capture"
-        status = "available"
+            output = l.rstrip().strip()
+            if output.startswith("device"):
+                dev_name = output.split("=")[-1].strip()
+                cam_name = dev_name.replace("/dev/","")
+                # USB Camera
+                if "usb" in dev_name:
+                    width = 1280
+                    height = 720
+                    format = "jpeg"
+                    subdev = "null"
+                    description = "USB Camera"
+                #RPi camera
+                elif "rpi" in dev_name:
+                    width = 1920
+                    height = 1080
+                    format = "rggb"
+                    subdev = "/dev/v4l-rpi-subdev{}".format(dev_name.strip()[-1])
+                    description = "RPi-V2 Camera"
+                else:
+                    width = 1280
+                    height = 720
+                    format = "auto"
+                    subdev = "null"
+                    description = "Unknown Device"
+
+                cam_names.append(DeviceItem(name=cam_name,
+                                            description=description,
+                                            status="available"
+                                        )
+                                )
+                device_details[cam_name] = DeviceDetails(id=dev_name,
+                                                         width=width,
+                                                         height=height,
+                                                         format=format,
+                                                         subdev=subdev)
+
         sdk_version = os.getenv('EDGEAI_VERSION')
         device_name = os.getenv('DEVICE_NAME')
         sensor.append(
             Sensor(
-                name=name,
+                name="null",
                 id="null",
-                type=sensor_type,
-                device=[
-                    DeviceItem(
-                        id=dev_num,
-                        type=device_type,
-                        description=description,
-                        status=status,
-                    )
-                ],
+                type="Camera",
+                device=cam_names,
                 sdk_version=sdk_version,
                 device_name=device_name
             )
