@@ -50,6 +50,7 @@ import yaml
 import math
 import tarfile
 import aiofiles
+import shutil
 
 app = FastAPI()
 active_connections: List[WebSocket] = []
@@ -292,10 +293,14 @@ def start_sensor_session(id, x: Model):
             detail=Response_Details.INVALID_ID.value,
         )
 
-    device_detail = device_details[x.sensor.device[0].name]
-
     # check if inference or raw stream to be started
     if x.inference == False:
+        if x.sensor.device[0].name == "null":
+            raise HTTPException(
+                status_code=Response_Code.BAD_REQUEST.value,
+                detail=Response_Details.INVALID_INPUT.value,
+            )
+        device_detail = device_details[x.sensor.device[0].name]
         # check if raw thread is running; if no start
         if rawvideo_process is None or not rawvideo_process.is_alive():
             try:
@@ -331,6 +336,7 @@ def start_sensor_session(id, x: Model):
         if inference_process is None or not inference_process.is_alive():
             print("inside inference")
             pcount = 0
+            input_file_width, input_file_height = 1280, 768
             # check if project folder of specified id exists
             if os.path.isdir(
                 "{}{}/{}".format(cwd, Dir_Path.PROJECT_DIR.value, x.project.id)
@@ -350,6 +356,12 @@ def start_sensor_session(id, x: Model):
                             cwd, Dir_Path.PROJECT_DIR.value, project["id"]
                         )
 
+                    # check if input file dimensions is present in project.config
+                    if "input_file_width" in project:
+                        input_file_width = project["input_file_width"]
+                    if "input_file_height" in project:
+                        input_file_height = project["input_file_height"]
+
             if pcount == 0:
                 raise HTTPException(
                     status_code=Response_Code.NOT_FOUND.value,
@@ -360,6 +372,28 @@ def start_sensor_session(id, x: Model):
                 check the type of inference and set the config file paths and model_type
                 variable to be sent as parameter when calling inference thread
                 """
+                if x.sensor.type == "Camera":
+                    if x.sensor.device[0].name == "null":
+                        raise HTTPException(
+                            status_code=Response_Code.BAD_REQUEST.value,
+                            detail=Response_Details.INVALID_INPUT.value,
+                        )
+                    input_detail = device_details[x.sensor.device[0].name]
+                elif x.sensor.type == "File":
+                    input_detail = DeviceDetails(id="{}/inputFile.h264".format(path),
+                                                 width=input_file_width,
+                                                 height=input_file_height,
+                                                 format="h264",
+                                                 subdev="null"
+                                                )
+                else:
+                    input_detail = DeviceDetails(id="/opt/edgeai-test-data/videos/video0_1280_768.h264",
+                                                 width=1280,
+                                                 height=768,
+                                                 format="h264",
+                                                 subdev="null"
+                                                )
+                print("using {}".format(input_detail.id))
                 if x.project.task_type == "classification":
                     model_type = "image_classification"
                     config_yaml_path = "../config/image_classification.yaml"
@@ -399,11 +433,11 @@ def start_sensor_session(id, x: Model):
                         }
                     y["models"].update(model)
                     y["flows"]["flow0"][1] = "model{}".format(keyCount)
-                    y["inputs"]["input0"]["source"] = device_detail.id
-                    y["inputs"]["input0"]["format"] = device_detail.format
-                    y["inputs"]["input0"]["width"] = device_detail.width
-                    y["inputs"]["input0"]["height"] = device_detail.height
-                    y["inputs"]["input0"]["subdev-id"] = device_detail.subdev
+                    y["inputs"]["input0"]["source"] = input_detail.id
+                    y["inputs"]["input0"]["format"] = input_detail.format
+                    y["inputs"]["input0"]["width"] = input_detail.width
+                    y["inputs"]["input0"]["height"] = input_detail.height
+                    y["inputs"]["input0"]["subdev-id"] = input_detail.subdev
 
                     if x.session.stream_type == 'image':
                         y["outputs"]["output0"]["encoding"] = 'jpeg'
@@ -415,7 +449,7 @@ def start_sensor_session(id, x: Model):
 
                     try:
                         # Start inference thread with the parameter to indicate type of inference
-                        inference_process = InferenceProcess(model_type, device_detail.id)
+                        inference_process = InferenceProcess(model_type, input_detail.id)
                         inference_process.start()
                         process_name = "optiflow"
                         time.sleep(SOC_Vals.OPTIFLOW_LAUNCH_TIMEOUT.value)
@@ -479,15 +513,16 @@ def initiate_sensor_session(x: Sensor):
     pid = None
     sensor_found = False
 
-    for i in range(len(sensor[0].device)):
-        if x.device[0] == (sensor[0].device[i]):
-            sensor_found = True
-            break
-    if not sensor_found:
-        raise HTTPException(
-            status_code=Response_Code.METHOD_NOT_ALLOWED.value,
-            detail=Response_Details.INVALID_INPUT.value,
-        )
+    if x.type == "Camera":
+        for i in range(len(sensor[0].device)):
+            if x.device[0] == (sensor[0].device[i]):
+                sensor_found = True
+                break
+        if not sensor_found:
+            raise HTTPException(
+                status_code=Response_Code.METHOD_NOT_ALLOWED.value,
+                detail=Response_Details.INVALID_INPUT.value,
+            )
 
     # Check if node process is running or not and update count variable
     for proc in psutil.process_iter():
@@ -519,6 +554,20 @@ def initiate_sensor_session(x: Sensor):
                 print("newly created node", pid)
         # Generate sensor session id
         ss_id = str(uuid.uuid4())
+
+        if x.type == "Camera":
+            device = {
+                        "name": x.device[0].name,
+                        "description": x.device[0].description,
+                        "status": x.device[0].status,
+                    }
+        else:
+            device = {
+                        "name": "null",
+                        "description": "null",
+                        "status": "null",
+                    }
+
         session = Model(
             session={
                 "id": ss_id,
@@ -533,13 +582,7 @@ def initiate_sensor_session(x: Sensor):
                 "name": x.name,
                 "id": x.id,
                 "type": x.type,
-                "device": [
-                    {
-                        "name": x.device[0].name,
-                        "description": x.device[0].description,
-                        "status": x.device[0].status,
-                    }
-                ],
+                "device": [device],
                 "sdk_version": x.sdk_version,
                 "device_name": x.device_name
             },
@@ -707,10 +750,16 @@ def get_sensor():
     print("get sensor endpoint called")
     if len(sensor) != 0:
         sensor.clear()
+    if len(device_details) != 0:
+        device_details.clear()
+
     """
     Use setup_cameras.sh sdk script to check camera connection and
     if yes,extract video device file name
     """
+
+    device=[]
+
     data = subprocess.Popen(
         "{}/setup_cameras.sh".format(Dir_Path.SCRIPTS_DIR.value),
         stdout=subprocess.PIPE,
@@ -721,12 +770,14 @@ def get_sensor():
     line = data.stdout.readline()
     if not line:
         print("sensor not found")
-        raise HTTPException(
-            status_code=Response_Code.NOT_FOUND.value,
-            detail=Response_Details.SENSOR_NOT_FOUND.value,
-        )
+        type="null"
+        device.append(DeviceItem(name="null",
+                                 description="null",
+                                 status="null"
+                                )
+                        )
+
     else:
-        cam_names=[]
         for l in data.stdout:
             output = l.rstrip().strip()
             if output.startswith("device"):
@@ -753,30 +804,31 @@ def get_sensor():
                     subdev = "null"
                     description = "Unknown Device"
 
-                cam_names.append(DeviceItem(name=cam_name,
+                device.append(DeviceItem(name=cam_name,
                                             description=description,
                                             status="available"
                                         )
-                                )
+                             )
                 device_details[cam_name] = DeviceDetails(id=dev_name,
                                                          width=width,
                                                          height=height,
                                                          format=format,
                                                          subdev=subdev)
+        type="Camera"
 
-        sdk_version = os.getenv('EDGEAI_VERSION')
-        device_name = os.getenv('DEVICE_NAME')
-        sensor.append(
-            Sensor(
-                name="null",
-                id="null",
-                type="Camera",
-                device=cam_names,
-                sdk_version=sdk_version,
-                device_name=device_name
-            )
+    sdk_version = os.getenv('EDGEAI_VERSION')
+    device_name = os.getenv('DEVICE_NAME')
+    sensor.append(
+        Sensor(
+            name="null",
+            id="null",
+            type=type,
+            device=device,
+            sdk_version=sdk_version,
+            device_name=device_name
         )
-        return sensor
+    )
+    return sensor
 
 
 @app.post("/project", status_code=Response_Code.CREATED.value)
@@ -878,6 +930,93 @@ async def upload_model(id, file: UploadFile = File(...)):
     else:
         return (Response_Details.CREATED.value, project["id"])
 
+@app.post("/project/{id}/input_file", status_code=Response_Code.CREATED.value)
+async def upload_input_file(id, file: UploadFile = File(...)):
+    """
+    Function to upload input file for inference inside the project folder
+    Args:
+        id: Project id parameter
+        file: actual Python file that you can pass directly to other functions
+              or libraries that expect a "file-like" object
+    """
+    global cwd
+    try:
+        print("FILE:", file)
+        print("filename :", file.filename)
+        filecontent = await file.read()
+        filesize = len(filecontent)
+        print("filesize is", filesize)
+
+        filepath = os.path.join("./", os.path.basename("inputFile"))
+        # Use aiofiles package to write base 64 file
+        async with aiofiles.open(filepath, "wb") as f:
+            await f.write(filecontent)
+        count = 0
+
+        if os.path.isdir("{}{}/{}".format(cwd, Dir_Path.PROJECT_DIR.value, id)):
+
+            with open(
+                "{}{}/{}/project.config".format(cwd, Dir_Path.PROJECT_DIR.value, id),
+                "r+",
+            ) as config:
+                project = json.load(config)
+                # confirm project folder before extraction
+                if project["id"] == id:
+                    count = count + 1
+                    src = "{}/inputFile".format(cwd)
+                    dst = "{}{}/{}/inputFile.h264".format(cwd, Dir_Path.PROJECT_DIR.value, project["id"])
+                    shutil.copy(src, dst)
+                    print("Input File Copied")
+                    os.remove("{}/inputFile".format(cwd))
+
+                    # Get video file dimensions
+                    p = subprocess.Popen("gst-discoverer-1.0 {}".format(dst),
+                                          stdout=subprocess.PIPE,
+                                          bufsize=1,
+                                          universal_newlines=True,
+                                          shell=True,
+                                        )
+                    is_h264 = False
+                    is_containerized = False
+                    width,height = 1280, 768
+                    for line in p.stdout:
+                        output = line.rstrip().strip()
+                        if "H.264" in output:
+                            is_h264 = True
+                        if "container" in output:
+                            is_containerized = True
+                        if output.startswith("Width"):
+                            width = int(output.split(":")[-1].strip())
+                        elif output.startswith("Height"):
+                            height = int(output.split(":")[-1].strip())
+
+                    if not is_h264 or is_containerized:
+                        print("Error: Uploaded file is not .h264")
+                        raise HTTPException(
+                            status_code=Response_Code.METHOD_NOT_ALLOWED.value,
+                            detail=Response_Details.INVALID_INPUT.value,
+                        )
+
+                    project["input_file_width"] = int(width)
+                    project["input_file_height"] = int(height)
+                    # Update project config file
+                    config.seek(0)
+                    json.dump(project, config)
+                    config.truncate()
+
+    except Exception as e:
+        print("Error in uploading input file to EVM whose exception is", e)
+        raise HTTPException(
+            status_code=Response_Code.METHOD_NOT_ALLOWED.value,
+            detail=Response_Details.INVALID_INPUT.value,
+        )
+    if count == 0:
+        raise HTTPException(
+            status_code=Response_Code.NOT_FOUND.value,
+            detail=Response_Details.PROJECT_NOT_FOUND.value,
+        )
+    else:
+        return (Response_Details.CREATED.value, project["id"])
 
 @app.get("/project", status_code=Response_Code.OK.value)
 def get_projects():

@@ -13,8 +13,6 @@ from utils import colors
 parser = ArgumentParser()
 
 parser.add_argument("--ip", help="IP of device agent", required=True)
-parser.add_argument("--device", help="Device name")
-parser.add_argument("--sdk", help="SDK version")
 parser.add_argument(
     "--test_suite",
     action="store",
@@ -37,26 +35,14 @@ if args.test_suite == None or args.test_suite == "inference":
     if args.model_path == None or args.task_type == None:
         parser.error(" requires --model_path and --task_type")
 
-SDK = "9.0"
-DEVICE = "TDA4VM"
-
-if args.sdk:
-    SDK = args.sdk
-if args.device:
-    DEVICE = args.device
-
-print(
-    "Testing device agent running on %s with %s SDK with IP %s\n\n"
-    % (DEVICE, SDK, args.ip)
-)
 
 SENSOR_DATA = {
-    "name": "test_name",
-    "id": "test_id",
-    "type": "test_type",
+    "name": None,
+    "id": None,
+    "type": None,
     "device": None,
-    "sdk_version": SDK,
-    "device_name": DEVICE,
+    "sdk_version": None,
+    "device_name": None,
 }
 
 URL = "http://%s:8000" % args.ip
@@ -89,29 +75,39 @@ def create_sensor_session():
         print(ERROR_STR, "%s" % response.json())
         return None
 
-    available_devices = []
-    for device in response.json()[0]['device']:
-        available_devices.append(device['name'])
+    #SENSOR_DATA["type"] = "File"
+    SENSOR_DATA["type"] = "Camera"
 
-    if len(available_devices) > 1:
-        print("\n----- Please choose 1 to use -----\n")
-        for idx, i in enumerate(available_devices):
-            print(idx, "-", i)
-        print()
-        while 1:
-            choice = input("Enter your choice:")
-            if not choice.isdigit() or int(choice) >= len(available_devices):
-                print("[ERROR] Enter a valid choice.")
-            else:
-                choice = int(choice)
-                break
+    if SENSOR_DATA["type"] == "Camera":
+        available_devices = []
+        for device in response.json()[0]['device']:
+            available_devices.append(device['name'])
+
+        if len(available_devices) > 1:
+            print("\n----- Please choose 1 to use -----\n")
+            for idx, i in enumerate(available_devices):
+                print(idx, "-", i)
+            print()
+            while 1:
+                choice = input("Enter your choice:")
+                if not choice.isdigit() or int(choice) >= len(available_devices):
+                    print("[ERROR] Enter a valid choice.")
+                else:
+                    choice = int(choice)
+                    break
+        else:
+            choice = 0
+        print("\nUsing %s\n" % available_devices[choice])
+        SENSOR_DATA["device"] = [response.json()[0]["device"][choice]]
     else:
-        choice = 0
-
-    print("\nUsing %s\n" % available_devices[choice])
+        print("\nUsing file input\n")
+        SENSOR_DATA["device"] = response.json()[0]["device"]
 
     # Selecting one of the sources
-    SENSOR_DATA["device"] = [response.json()[0]["device"][choice]]
+    SENSOR_DATA["name"] = response.json()[0]["name"]
+    SENSOR_DATA["id"] = response.json()[0]["id"]
+    SENSOR_DATA["sdk_version"] = response.json()[0]["sdk_version"]
+    SENSOR_DATA["device_name"] = response.json()[0]["device_name"]
 
     print(INFO_STR, "Requesting session...")
     response = requests.post(URL + "/sensor-session", data=json.dumps(SENSOR_DATA))
@@ -309,6 +305,29 @@ def download_model_on_board(sensor_session):
 
     return 0
 
+def download_input_file_on_board(sensor_session):
+
+    sensor_session_id = sensor_session["session"]["id"]
+
+    shutil.copyfile("oob-gui-video3.h264", "inputFile")
+
+    with open("inputFile", "rb") as fobj:
+        print(INFO_STR, "Downloading input video file to evm...")
+        response = requests.post(
+            URL + "/project/" + sensor_session_id + "/input_file",
+            data={"id": sensor_session_id},
+            files={"file": fobj},
+        )
+        if response.status_code != 201:
+            print(ERROR_STR, "%s" % response.json())
+            return -1
+
+    os.remove("inputFile")
+
+    print(SUCCESS_STR, "Video Input file downloaded successfully!")
+
+    return 0
+
 
 def start_inference(sensor_session):
     global data_stream_listner_status
@@ -450,6 +469,11 @@ def main():
             return (SENSOR_SESSION_TEST, RAW_VIDEOTEST, INFERENCE_TEST)
 
         ret = download_model_on_board(sensor_session)
+        if ret == -1:
+            delete_sensor_session(sensor_session)
+            return (SENSOR_SESSION_TEST, RAW_VIDEOTEST, INFERENCE_TEST)
+
+        ret = download_input_file_on_board (sensor_session)
         if ret == -1:
             delete_sensor_session(sensor_session)
             return (SENSOR_SESSION_TEST, RAW_VIDEOTEST, INFERENCE_TEST)
