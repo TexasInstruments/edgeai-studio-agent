@@ -53,8 +53,7 @@ SUCCESS_STR = colors.fg.green + "[SUCCESS]" + colors.reset
 WARN_STR = colors.fg.yellow + "[WARNING]" + colors.reset
 INFO_STR = colors.fg.blue + "[INFO]" + colors.reset
 
-
-def create_sensor_session():
+def create_sensor_session(sensor_type):
     print(INFO_STR, "Getting sensor info...")
     try:
         response = requests.get(URL + "/sensor", timeout=5)
@@ -75,32 +74,35 @@ def create_sensor_session():
         print(ERROR_STR, "%s" % response.json())
         return None
 
-    #SENSOR_DATA["type"] = "File"
-    SENSOR_DATA["type"] = "Camera"
+    SENSOR_DATA["type"] = sensor_type
 
     if SENSOR_DATA["type"] == "Camera":
         available_devices = []
         for device in response.json()[0]['device']:
             available_devices.append(device['name'])
 
-        if len(available_devices) > 1:
-            print("\n----- Please choose 1 to use -----\n")
-            for idx, i in enumerate(available_devices):
-                print(idx, "-", i)
-            print()
-            while 1:
-                choice = input("Enter your choice:")
-                if not choice.isdigit() or int(choice) >= len(available_devices):
-                    print("[ERROR] Enter a valid choice.")
-                else:
-                    choice = int(choice)
-                    break
-        else:
-            choice = 0
+        if len(available_devices) == 1 and available_devices[0] == "null":
+            print(ERROR_STR, "No camera found")
+            return None
+
+        print("\n----- Please choose 1 to use -----\n")
+        for idx, i in enumerate(available_devices):
+            print(idx, "-", i)
+        print()
+        while 1:
+            choice = input("Enter your choice: ")
+            if not choice.isdigit() or int(choice) >= len(available_devices):
+                print("[ERROR] Enter a valid choice.")
+            else:
+                choice = int(choice)
+                break
         print("\nUsing %s\n" % available_devices[choice])
         SENSOR_DATA["device"] = [response.json()[0]["device"][choice]]
-    else:
+    elif (SENSOR_DATA["type"] == "File"):
         print("\nUsing file input\n")
+        SENSOR_DATA["device"] = response.json()[0]["device"]
+    else:
+        print("\nUsing default input\n")
         SENSOR_DATA["device"] = response.json()[0]["device"]
 
     # Selecting one of the sources
@@ -309,7 +311,16 @@ def download_input_file_on_board(sensor_session):
 
     sensor_session_id = sensor_session["session"]["id"]
 
-    shutil.copyfile("oob-gui-video3.h264", "inputFile")
+    print("\n----- Please provide input file path -----\n")
+    print()
+    while 1:
+        path = input("Enter path: ")
+        if not os.path.exists(path):
+            print("[ERROR] Enter a valid path.")
+        else:
+            break
+
+    shutil.copyfile(path, "inputFile")
 
     with open("inputFile", "rb") as fobj:
         print(INFO_STR, "Downloading input video file to evm...")
@@ -447,47 +458,77 @@ def main():
     RAW_VIDEOTEST = "FAIL"
     INFERENCE_TEST = "FAIL"
 
-    sensor_session = create_sensor_session()
-    if sensor_session == None:
-        return (SENSOR_SESSION_TEST, RAW_VIDEOTEST, INFERENCE_TEST)
-    SENSOR_SESSION_TEST = "PASS"
-
-    if args.test_suite == None or args.test_suite == "data_stream":
-        ret = start_raw_stream(sensor_session)
-        delete_sensor_session_data_pipe(sensor_session)
-        if ret == -1:
-            delete_sensor_session(sensor_session)
-            return (SENSOR_SESSION_TEST, RAW_VIDEOTEST, INFERENCE_TEST)
-        RAW_VIDEOTEST = "PASS"
-    else:
+    if args.test_suite == "sensor_session":
         RAW_VIDEOTEST = "NA"
-
-    if args.test_suite == None or args.test_suite == "inference":
-        ret = create_project(sensor_session)
-        if ret == -1:
-            delete_sensor_session(sensor_session)
-            return (SENSOR_SESSION_TEST, RAW_VIDEOTEST, INFERENCE_TEST)
-
-        ret = download_model_on_board(sensor_session)
-        if ret == -1:
-            delete_sensor_session(sensor_session)
-            return (SENSOR_SESSION_TEST, RAW_VIDEOTEST, INFERENCE_TEST)
-
-        ret = download_input_file_on_board (sensor_session)
-        if ret == -1:
-            delete_sensor_session(sensor_session)
-            return (SENSOR_SESSION_TEST, RAW_VIDEOTEST, INFERENCE_TEST)
-
-        ret = start_inference(sensor_session)
-        delete_sensor_session_data_pipe(sensor_session)
-        if ret == -1:
-            delete_sensor_session(sensor_session)
-            return (SENSOR_SESSION_TEST, RAW_VIDEOTEST, INFERENCE_TEST)
-        INFERENCE_TEST = "PASS"
-    else:
         INFERENCE_TEST = "NA"
+        sensor_session = create_sensor_session("Default")
+        if sensor_session == None:
+            return (SENSOR_SESSION_TEST, RAW_VIDEOTEST, INFERENCE_TEST)
+        delete_sensor_session(sensor_session)
+        SENSOR_SESSION_TEST = "PASS"
 
-    delete_sensor_session(sensor_session)
+    else:
+        if args.test_suite == None or args.test_suite == "data_stream":
+            sensor_session = create_sensor_session("Camera")
+            if sensor_session == None:
+                return (SENSOR_SESSION_TEST, RAW_VIDEOTEST, INFERENCE_TEST)
+            SENSOR_SESSION_TEST = "PASS"
+            ret = start_raw_stream(sensor_session)
+            delete_sensor_session_data_pipe(sensor_session)
+            delete_sensor_session(sensor_session)
+            if ret == -1:
+                return (SENSOR_SESSION_TEST, RAW_VIDEOTEST, INFERENCE_TEST)
+            RAW_VIDEOTEST = "PASS"
+        else:
+            RAW_VIDEOTEST = "NA"
+
+        if args.test_suite == None or args.test_suite == "inference":
+            print("\n----- Please choose input for inference -----\n")
+            print("0. Camera")
+            print("1. Video File (H264)")
+            print("2. Default")
+            print()
+            while 1:
+                choice = input("Enter your choice: ")
+                if choice not in ["0","1","2"] :
+                    print("[ERROR] Enter a valid choice.")
+                else:
+                    break
+
+            if choice == "0":
+                sensor_session = create_sensor_session("Camera")
+            elif choice == "1":
+                sensor_session = create_sensor_session("File")
+            else:
+                sensor_session = create_sensor_session("null")
+            if sensor_session == None:
+                return (SENSOR_SESSION_TEST, RAW_VIDEOTEST, INFERENCE_TEST)
+            SENSOR_SESSION_TEST = "PASS"
+
+            ret = create_project(sensor_session)
+            if ret == -1:
+                delete_sensor_session(sensor_session)
+                return (SENSOR_SESSION_TEST, RAW_VIDEOTEST, INFERENCE_TEST)
+
+            ret = download_model_on_board(sensor_session)
+            if ret == -1:
+                delete_sensor_session(sensor_session)
+                return (SENSOR_SESSION_TEST, RAW_VIDEOTEST, INFERENCE_TEST)
+
+            if choice == "1":
+                ret = download_input_file_on_board (sensor_session)
+                if ret == -1:
+                    delete_sensor_session(sensor_session)
+                    return (SENSOR_SESSION_TEST, RAW_VIDEOTEST, INFERENCE_TEST)
+
+            ret = start_inference(sensor_session)
+            delete_sensor_session_data_pipe(sensor_session)
+            delete_sensor_session(sensor_session)
+            if ret == -1:
+                return (SENSOR_SESSION_TEST, RAW_VIDEOTEST, INFERENCE_TEST)
+            INFERENCE_TEST = "PASS"
+        else:
+            INFERENCE_TEST = "NA"
 
     return (SENSOR_SESSION_TEST, RAW_VIDEOTEST, INFERENCE_TEST)
 
