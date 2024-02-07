@@ -25,7 +25,7 @@ parser.add_argument(
     "--task_type",
     help="Task type of the sample model",
     action="store",
-    choices=["classification", "detection"],
+    choices=["classification", "detection", "segmentation"],
 )
 parser.add_argument(
     "--no-strict", help="Skip JPEG file check", dest="no_strict", action="store_true"
