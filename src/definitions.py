@@ -60,6 +60,7 @@ class Response_Details(Enum):
     INVALID_INPUT = "Invalid input"
     PROJECT_CONFLICT = "Project already exists"
     SESSION_CONFLICT = "Sensor session alreday running"
+    INVALID_TASK_TYPE = "Invalid task type"
 
 
 class Server_Details(Enum):

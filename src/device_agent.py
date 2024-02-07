@@ -352,9 +352,17 @@ def start_sensor_session(id, x: Model):
                 if x.project.task_type == "classification":
                     model_type = "image_classification"
                     config_yaml_path = "../config/image_classification.yaml"
-                if x.project.task_type == "detection":
+                elif x.project.task_type == "detection":
                     model_type = "object_detection"
                     config_yaml_path = "../config/object_detection.yaml"
+                elif x.project.task_type == "segmentation":
+                    model_type = "semantic_segmentation"
+                    config_yaml_path = "../config/semantic_segmentation.yaml"
+                else:
+                    raise HTTPException(
+                        status_code=Response_Code.BAD_REQUEST.value,
+                        detail=Response_Details.INVALID_TASK_TYPE.value,
+                    )
                 with open(config_yaml_path, "r+") as f:
                     y = json.dumps(yaml.load(f, Loader=yaml.FullLoader))
                     y = json.loads(y)
@@ -386,6 +394,15 @@ def start_sensor_session(id, x: Model):
                                 "topN": 1,
                             }
                         }
+                    # If semantic segmentation, set alpha to 0.5
+                    if model_type == "semantic_segmentation":
+                        model = {
+                            "model{}".format(keyCount): {
+                                "model_path": "{}".format(path),
+                                "alpha": 0.5,
+                            }
+                        }
+
                     y["models"].update(model)
                     y["flows"]["flow0"][1] = "model{}".format(keyCount)
                     y["inputs"]["input0"]["source"] = dev_num
