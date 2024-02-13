@@ -358,6 +358,9 @@ def start_sensor_session(id, x: Model):
                 elif x.project.task_type == "segmentation":
                     model_type = "semantic_segmentation"
                     config_yaml_path = "../config/semantic_segmentation.yaml"
+                elif x.project.task_type == "keypoint_detection":
+                    model_type = "keypoint_detection"
+                    config_yaml_path = "../config/keypoint_detection.yaml"
                 else:
                     raise HTTPException(
                         status_code=Response_Code.BAD_REQUEST.value,
@@ -402,7 +405,14 @@ def start_sensor_session(id, x: Model):
                                 "alpha": 0.5,
                             }
                         }
-
+                    # If keypoint_detection, set viz_threshold to 0.5
+                    if model_type == "keypoint_detection":
+                        model = {
+                            "model{}".format(keyCount): {
+                                "model_path": "{}".format(path),
+                                "viz_threshold": 0.5,
+                            }
+                        }
                     y["models"].update(model)
                     y["flows"]["flow0"][1] = "model{}".format(keyCount)
                     y["inputs"]["input0"]["source"] = dev_num
