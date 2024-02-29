@@ -49,6 +49,15 @@ shown in the figure below:
 
     `./run.sh`
 
+# Update EdgeAI Studio Agent on target
+
+EdgeAI Studio Agent will be packaged as a part of EdgeAI SDK. In case you want to update, please remove the packaged repository and clone using the steps mentioned below.
+
+```
+root@soc:/opt/edgeai-gst-apps# cd /opt/
+root@soc:/opt# rm -rf edgeai-studio-agent
+root@soc:/opt# git clone -b EDGEAI_APP_STACK_09_01_01_00 https://github.com/TexasInstruments/edgeai-studio-agent.git
+```
 
 # API Documentation
 #### GET Requests
