@@ -397,12 +397,12 @@ def start_sensor_session(id, x: Model):
                                 "topN": 1,
                             }
                         }
-                    # If semantic segmentation, set alpha to 0.5
+                    # If semantic segmentation, set alpha to 0.2
                     if model_type == "semantic_segmentation":
                         model = {
                             "model{}".format(keyCount): {
                                 "model_path": "{}".format(path),
-                                "alpha": 0.5,
+                                "alpha": 0.2,
                             }
                         }
                     # If keypoint_detection, set viz_threshold to 0.5
