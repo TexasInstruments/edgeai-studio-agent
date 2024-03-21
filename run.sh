@@ -2,6 +2,8 @@
 
 EDGEAI_STUDIO_AGENT_PATH=$(dirname "$(readlink -f "$BASH_SOURCE")")
 
+systemctl stop seva-launcher &> /dev/null
+
 if [ "$SOC" == "" ]; then
     cd /opt/edgeai-gst-apps
     source ./init_script.sh
