@@ -29,11 +29,11 @@
 //  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 var dgram = require('dgram');
-var express = require('express')
+var express = require('/usr/lib/node_modules/express')
 var http = require('http')
 var EventEmitter = require('events').EventEmitter;
-let cors = require("cors");
-var bodyParser = require('express/node_modules/body-parser')
+let cors = require("/usr/lib/node_modules/cors");
+var bodyParser = require('/usr/lib/node_modules/express/node_modules/body-parser')
 
 var app = express();
 app.use(express.static(__dirname + '/'));
