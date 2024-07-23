@@ -1009,10 +1009,19 @@ if __name__ == "__main__":
     Check if any node process running if yes, kill them
     Check if projects folder for storing model is created, if no create folder.
     """
-    process_name = "node_webserver.js"
+    process_name = "../server/node_webserver.js"
     # To kill any node process beforehand using pid so as to not affect the udp server initiation
     for proc in psutil.process_iter():
-        if process_name in str(proc.cmdline()):
+        try:
+            cmdline = proc.cmdline()
+        except psutil.AccessDenied:
+            continue
+        except (psutil.ZombieProcess, psutil.NoSuchProcess):
+            continue
+        except Exception as e:
+            log.exception("something is wrong: " + ' '.join(cmdline))
+            continue
+        if process_name in cmdline:
             pid = proc.pid
             print(pid)
             os.kill(pid, 2)
