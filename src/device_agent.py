@@ -30,6 +30,7 @@
 
 import time
 import uvicorn
+from multiprocessing import SimpleQueue
 from typing import Optional
 from fastapi import FastAPI, HTTPException, UploadFile, File, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
@@ -296,9 +297,12 @@ def start_sensor_session(id, x: Model):
         # check if raw thread is running; if no start
         if rawvideo_process is None or not rawvideo_process.is_alive():
 
+            status = SimpleQueue()
+            isStreamValid = True
+
             try:
                 # Start raw video stream thread with parameter to indicate device file name
-                rawvideo_process = RawvideoProcess(dev_num, x.session.stream_type)
+                rawvideo_process = RawvideoProcess(dev_num, x.session.stream_type, status)
                 rawvideo_process.start()
                 process_name = "python_gst.py"
                 time.sleep(SOC_Vals.RAWVIDEOPROCESS_LAUNCH_TIMEOUT.value)
@@ -306,17 +310,27 @@ def start_sensor_session(id, x: Model):
                     if process_name in proc.name():
                         pid = proc.pid
                         print(pid)
+                time.sleep(1)
                 x.session.data_pipeline_pid = pid
                 x.session.data_pipeline_status = "up"
                 x.session.ws_status = "up"
                 x.session.ws_pid = os.getpid()
                 sensor_session = x.dict()
+                if status.empty() == False:
+                    isStreamValid = status.get()[0]
+                status.close()
+                if isStreamValid == False:
+                    raise Exception("Cannot start stream")
                 return x
             except:
                 print("Error starting raw stream ")
                 x.session.data_pipeline_pid = 0
                 x.session.data_pipeline_status = "down"
                 sensor_session = x.dict()
+                raise HTTPException(
+                    status_code=Response_Code.BAD_REQUEST.value,
+                    detail=Response_Details.INVALID_INPUT.value
+                )
 
         else:
             raise HTTPException(
@@ -433,9 +447,12 @@ def start_sensor_session(id, x: Model):
                 with open(config_yaml_path, "w") as fout:
                     yaml.safe_dump(y, fout, sort_keys=False)
 
+                    status = SimpleQueue()
+                    isStreamValid = True
+
                     try:
                         # Start inference thread with the parameter to indicate type of inference
-                        inference_process = InferenceProcess(model_type, dev_num)
+                        inference_process = InferenceProcess(model_type, dev_num, status)
                         inference_process.start()
                         process_name = "optiflow"
                         time.sleep(SOC_Vals.OPTIFLOW_LAUNCH_TIMEOUT.value)
@@ -444,11 +461,17 @@ def start_sensor_session(id, x: Model):
                             if process_name in proc.name():
                                 pid = proc.pid
                                 print(pid)
+                        time.sleep(1)
                         x.session.data_pipeline_pid = pid
                         x.session.data_pipeline_status = "up"
                         x.session.ws_status = "up"
                         x.session.ws_pid = os.getpid()
                         sensor_session = x.dict()
+                        if status.empty() == False:
+                            isStreamValid = status.get()[0]
+                        status.close()
+                        if isStreamValid == False:
+                            raise Exception("Cannot start stream")
                         return x
                     except:
                         """
@@ -473,6 +496,10 @@ def start_sensor_session(id, x: Model):
                             y["models"] = x
                         with open(config_yaml_path, "w") as fout:
                             yaml.safe_dump(y, fout, sort_keys=False)
+                        raise HTTPException(
+                            status_code=Response_Code.BAD_REQUEST.value,
+                            detail=Response_Details.INVALID_INPUT.value
+                        )
         else:
             raise HTTPException(
                 status_code=Response_Code.CONFLICT.value,
