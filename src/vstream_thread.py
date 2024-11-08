@@ -28,7 +28,7 @@
 #  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from multiprocessing import Process
+from multiprocessing import Process, SimpleQueue
 from websocket import create_connection
 from definitions import Dir_Path, SOC_Vals
 import time
@@ -37,7 +37,6 @@ import psutil
 import subprocess
 import re
 import json
-
 
 def run_loop(dev_num, config, stream_type, name=""):
     """ "
@@ -62,10 +61,16 @@ def run_loop(dev_num, config, stream_type, name=""):
                 model_config,
             ),
             stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             bufsize=1,
             universal_newlines=True,
             shell=True,
         )
+        _ , stderr = process1.communicate()
+
+        if stderr != "":
+            raise Exception("Resolution not supported")
+
         time.sleep(SOC_Vals.INF_GST_LAUNCH_TIMEOUT.value)
         process_name = "gst-launch"
         for proc in psutil.process_iter():
@@ -116,14 +121,20 @@ def run_loop(dev_num, config, stream_type, name=""):
         # start raw stream by invoking python_gst script
         cmd = "./python_gst.py {} {} {} {}".format(dev_num, width, height, stream_type)
         process = subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True, shell=True
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=1, universal_newlines=True, shell=True
         )
+
+        _ , stderr = process.communicate()
+
+        if stderr != "":
+            raise Exception("Resolution not supported")
 
         while True:
             # check usb cam's availability during streaming by checking if video device file is present or not
             if os.path.exists(dev_num):
                 status = "AVAILABLE"
                 ws3.send(status)
+
                 time.sleep(0.1)
             else:
                 status = "USB_CAM NOT FOUND"
@@ -138,7 +149,7 @@ class InferenceProcess(Process):
     Class for starting inference thread
     """
 
-    def __init__(self, model_config, dev_num):
+    def __init__(self, model_config, dev_num, status):
         """
         Constructor for InferenceProcess class
         Args:
@@ -148,12 +159,16 @@ class InferenceProcess(Process):
         self.model_config = model_config
         self.dev_num = dev_num
         print(self.model_config)
-        super(InferenceProcess, self).__init__()
+        super(InferenceProcess, self).__init__(target=self.inferencestream, args=(status,))
 
-    def run(self):
+    def inferencestream(self, status):
         print("Inference thread started....")
-        run_loop(self.dev_num, self.model_config, None, "INFERENCE")
-        print("Inference thread completed...!!!")
+        try:
+            run_loop(self.dev_num, self.model_config, None, "INFERENCE")
+            print("Inference thread completed...!!!")
+        except:
+            validStream = False
+            status.put([validStream])
 
 
 class RawvideoProcess(Process):
@@ -161,7 +176,7 @@ class RawvideoProcess(Process):
     Class for starting raw stream thread
     """
 
-    def __init__(self, dev_num, stream_type):
+    def __init__(self, dev_num, stream_type, status):
         """
         Constructor for RawVideoProcess class
         Args:
@@ -170,9 +185,14 @@ class RawvideoProcess(Process):
         """
         self.dev_num = dev_num
         self.stream_type = stream_type
-        super(RawvideoProcess, self).__init__()
+        super(RawvideoProcess, self).__init__(target=self.rawvidstream, args=(status,))
 
-    def run(self):
+    def rawvidstream(self, status):
         print("raw video stream thread started....")
-        run_loop(self.dev_num, None, self.stream_type, "RAWVIDEO")
-        print("raw video stream thread completed...!!!")
+        try:
+            run_loop(self.dev_num, None, self.stream_type, "RAWVIDEO")
+            print("raw video stream thread completed...!!!")
+        except:
+            validStream = False
+            status.put([validStream])
+
